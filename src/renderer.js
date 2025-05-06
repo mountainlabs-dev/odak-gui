@@ -128,8 +128,39 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Port Management Functions
-  function updatePortList(ports) {
-    // Clear current options
+  function updatePortList(portsData) {
+    // Extract the ports list and connection info
+    const ports = Array.isArray(portsData) ? portsData : (portsData.ports || []);
+    const connectionInfo = !Array.isArray(portsData) ? {
+      isConnected: portsData.isConnected,
+      currentPort: portsData.currentPort
+    } : { isConnected: false, currentPort: null };
+    
+    // Don't modify button states if we're already connected
+    if (connectionInfo.isConnected && isConnected) {
+      // Still update the port list, but preserve connection state
+      portSelect.innerHTML = '';
+      
+      ports.forEach(port => {
+        const option = document.createElement('option');
+        option.value = port.path;
+        option.text = `${port.path} - ${port.manufacturer || 'Unknown device'}`;
+        
+        // Select the current connected port
+        if (port.path === connectionInfo.currentPort) {
+          option.selected = true;
+        }
+        
+        portSelect.add(option);
+      });
+      
+      // Make sure buttons remain in the correct state
+      connectBtn.disabled = true;
+      disconnectBtn.disabled = false;
+      return;
+    }
+    
+    // If not connected, proceed with normal port list update
     portSelect.innerHTML = '';
     
     if (ports.length === 0) {
@@ -145,7 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
         option.text = `${port.path} - ${port.manufacturer || 'Unknown device'}`;
         portSelect.add(option);
       });
-      connectBtn.disabled = false;
+      
+      // Only enable connect button if we're definitely not connected
+      connectBtn.disabled = isConnected;
     }
   }
   
@@ -160,29 +193,61 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!portSelect.value) return;
     
     try {
+      // Disable both buttons during the connection attempt
+      connectBtn.disabled = true;
+      disconnectBtn.disabled = true;
+      
       const result = await window.api.connectToPort({ path: portSelect.value });
       
       if (result.success) {
         selectedPort = portSelect.value;
+        // Immediately update UI state for successful connection
+        isConnected = true;
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        connectionStatus.innerHTML = `<span class="badge connected"><i class="bi bi-link me-1"></i> Connected to ${selectedPort}</span>`;
+        updateFirmwareBtn.disabled = !selectedFirmwarePath;
         addToCliOutput(`Connected to ${selectedPort}`, 'cli-command');
       } else {
+        // Reset buttons if connection failed
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
         displayError({ message: 'Failed to connect', details: result.error });
       }
     } catch (error) {
+      // Reset buttons on error
+      connectBtn.disabled = false;
+      disconnectBtn.disabled = true;
       displayError({ message: 'Connection error', details: error.message });
     }
   }
   
   async function disconnectPort() {
     try {
+      // Disable both buttons during the disconnection attempt
+      connectBtn.disabled = true;
+      disconnectBtn.disabled = true;
+      
       const result = await window.api.disconnectPort();
       
       if (result.success) {
+        // Immediately update UI state for successful disconnection
+        isConnected = false;
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        connectionStatus.innerHTML = '<span class="badge disconnected"><i class="bi bi-broadcast me-1"></i> Disconnected</span>';
+        updateFirmwareBtn.disabled = true;
         addToCliOutput('Disconnected from device', 'cli-command');
       } else {
+        // Reset buttons if disconnection failed
+        connectBtn.disabled = isConnected;
+        disconnectBtn.disabled = !isConnected;
         displayError({ message: 'Failed to disconnect', details: result.error });
       }
     } catch (error) {
+      // Reset buttons on error
+      connectBtn.disabled = isConnected;
+      disconnectBtn.disabled = !isConnected;
       displayError({ message: 'Disconnect error', details: error.message });
     }
   }
@@ -333,12 +398,18 @@ document.addEventListener('DOMContentLoaded', () => {
       addDataPoint('voc', data.voc);
     }
     
+    // Handle both PM1 formats
     if (data.pm1 !== undefined) {
       readingPm1.textContent = `${data.pm1.toFixed(1)}`;
       addDataPoint('pm1', data.pm1);
     }
     
-    if (data.pm25 !== undefined) {
+    // Handle both PM2.5 formats (pm25 or pm2.5)
+    if (data['pm2.5'] !== undefined) {
+      readingPm25.textContent = `${data['pm2.5'].toFixed(1)}`;
+      statPm25.textContent = `${data['pm2.5'].toFixed(1)} µg/m³`;
+      addDataPoint('pm25', data['pm2.5']);
+    } else if (data.pm25 !== undefined) {
       readingPm25.textContent = `${data.pm25.toFixed(1)}`;
       statPm25.textContent = `${data.pm25.toFixed(1)} µg/m³`;
       addDataPoint('pm25', data.pm25);
@@ -349,9 +420,28 @@ document.addEventListener('DOMContentLoaded', () => {
       addDataPoint('pm10', data.pm10);
     }
     
+    // Battery could be percentage or voltage
     if (data.battery !== undefined) {
-      readingBatt.textContent = `${data.battery.toFixed(2)}`;
+      // If battery is in percentage (0-100) display as percentage, otherwise as voltage
+      if (data.battery > 0 && data.battery <= 100 && Number.isInteger(data.battery)) {
+        readingBatt.textContent = `${data.battery}%`;
+      } else {
+        readingBatt.textContent = `${data.battery.toFixed(2)}V`;
+      }
       addDataPoint('battery', data.battery);
+    }
+    
+    // Additional fields from the example JSON
+    if (data.pressure !== undefined) {
+      addToCliOutput(`Pressure: ${data.pressure.toFixed(2)} hPa`, 'cli-info');
+    }
+    
+    if (data.elevation !== undefined) {
+      addToCliOutput(`Elevation: ${data.elevation} m`, 'cli-info');
+    }
+    
+    if (data.aqi !== undefined) {
+      addToCliOutput(`Air Quality Index: ${data.aqi}`, 'cli-info');
     }
     
     // Update charts

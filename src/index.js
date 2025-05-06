@@ -82,7 +82,12 @@ async function listSerialPorts() {
   try {
     const ports = await SerialPort.list();
     if (mainWindow) {
-      mainWindow.webContents.send('ports-list', ports);
+      // Send the connection state along with the ports list
+      mainWindow.webContents.send('ports-list', {
+        ports: ports,
+        isConnected: serialConnection && serialConnection.isOpen,
+        currentPort: serialConnection ? serialConnection.path : null
+      });
     }
   } catch (error) {
     console.error('Error listing ports:', error);
