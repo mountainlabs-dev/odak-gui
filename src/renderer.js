@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ports.forEach(port => {
         const option = document.createElement('option');
         option.value = port.path;
-        option.text = `${port.path} - ${port.manufacturer || 'Unknown device'}`;
+        option.text = `${port.path}`;
         
         // Select the current connected port
         if (port.path === connectionInfo.currentPort) {
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ports.forEach(port => {
         const option = document.createElement('option');
         option.value = port.path;
-        option.text = `${port.path} - ${port.manufacturer || 'Unknown device'}`;
+        option.text = `${port.path}`;
         portSelect.add(option);
       });
       
