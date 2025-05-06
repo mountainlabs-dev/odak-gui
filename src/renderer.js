@@ -32,6 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const readingPm10 = document.getElementById('reading-pm10');
   const readingBatt = document.getElementById('reading-batt');
   
+  // Additional DOM elements for enhanced UI
+  const statTemp = document.getElementById('stat-temp');
+  const statHumidity = document.getElementById('stat-humidity');
+  const statCo2 = document.getElementById('stat-co2');
+  const statPm25 = document.getElementById('stat-pm25');
+
   // Application state
   let isConnected = false;
   let selectedPort = null;
@@ -184,13 +190,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateConnectionStatus(status) {
     if (status.connected) {
       isConnected = true;
-      connectionStatus.innerHTML = `<span class="badge connected">Connected to ${status.port}</span>`;
+      connectionStatus.innerHTML = `<span class="badge connected"><i class="bi bi-link me-1"></i> Connected to ${status.port}</span>`;
       connectBtn.disabled = true;
       disconnectBtn.disabled = false;
       updateFirmwareBtn.disabled = !selectedFirmwarePath;
     } else {
       isConnected = false;
-      connectionStatus.innerHTML = '<span class="badge disconnected">Not Connected</span>';
+      connectionStatus.innerHTML = '<span class="badge disconnected"><i class="bi bi-broadcast me-1"></i> Disconnected</span>';
       connectBtn.disabled = false;
       disconnectBtn.disabled = true;
       updateFirmwareBtn.disabled = true;
@@ -230,9 +236,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
+  // Enhance CLI with colored output
   function addToCliOutput(text, className = 'cli-output') {
     const line = document.createElement('div');
     line.className = className;
+    
+    // Enhanced colored output based on content
+    if (className === 'cli-output') {
+      if (text.includes('ERROR') || text.includes('failed') || text.includes('Failed')) {
+        line.className = 'cli-error';
+      } else if (text.includes('WARNING') || text.includes('WARN')) {
+        line.className = 'cli-warning';
+      } else if (text.includes('INFO') || text.includes('success') || text.includes('Success')) {
+        line.className = 'cli-info';
+      }
+    }
+    
     line.textContent = text;
     cliOutput.appendChild(line);
     cliOutput.scrollTop = cliOutput.scrollHeight;
@@ -292,42 +311,46 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSensorReadings(data) {
     // Update current readings display
     if (data.temperature !== undefined) {
-      readingTemp.textContent = `${data.temperature.toFixed(1)} °C`;
+      readingTemp.textContent = `${data.temperature.toFixed(1)}`;
+      statTemp.textContent = `${data.temperature.toFixed(1)} °C`;
       addDataPoint('temperature', data.temperature);
     }
     
     if (data.humidity !== undefined) {
-      readingHum.textContent = `${data.humidity.toFixed(1)} %`;
+      readingHum.textContent = `${data.humidity.toFixed(1)}`;
+      statHumidity.textContent = `${data.humidity.toFixed(1)} %`;
       addDataPoint('humidity', data.humidity);
     }
     
     if (data.co2 !== undefined) {
-      readingCo2.textContent = `${data.co2.toFixed(0)} ppm`;
+      readingCo2.textContent = `${data.co2.toFixed(0)}`;
+      statCo2.textContent = `${data.co2.toFixed(0)} ppm`;
       addDataPoint('co2', data.co2);
     }
     
     if (data.voc !== undefined) {
-      readingVoc.textContent = `${data.voc.toFixed(2)} mg/m³`;
+      readingVoc.textContent = `${data.voc.toFixed(2)}`;
       addDataPoint('voc', data.voc);
     }
     
     if (data.pm1 !== undefined) {
-      readingPm1.textContent = `${data.pm1.toFixed(1)} µg/m³`;
+      readingPm1.textContent = `${data.pm1.toFixed(1)}`;
       addDataPoint('pm1', data.pm1);
     }
     
     if (data.pm25 !== undefined) {
-      readingPm25.textContent = `${data.pm25.toFixed(1)} µg/m³`;
+      readingPm25.textContent = `${data.pm25.toFixed(1)}`;
+      statPm25.textContent = `${data.pm25.toFixed(1)} µg/m³`;
       addDataPoint('pm25', data.pm25);
     }
     
     if (data.pm10 !== undefined) {
-      readingPm10.textContent = `${data.pm10.toFixed(1)} µg/m³`;
+      readingPm10.textContent = `${data.pm10.toFixed(1)}`;
       addDataPoint('pm10', data.pm10);
     }
     
     if (data.battery !== undefined) {
-      readingBatt.textContent = `${data.battery.toFixed(2)} V`;
+      readingBatt.textContent = `${data.battery.toFixed(2)}`;
       addDataPoint('battery', data.battery);
     }
     
@@ -481,6 +504,17 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Chart Functions
   function initCharts() {
+    // Chart.js global defaults
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#495057';
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.tooltip.cornerRadius = 6;
+    Chart.defaults.plugins.tooltip.titleFont = { weight: 'bold', size: 13 };
+    Chart.defaults.plugins.title.display = true;
+    Chart.defaults.plugins.title.font = { weight: 'bold', size: 14 };
+    
     // Temperature and Humidity Chart
     const tempHumCtx = document.getElementById('tempHumChart');
     charts.tempHum = new Chart(tempHumCtx, {
@@ -489,17 +523,23 @@ document.addEventListener('DOMContentLoaded', () => {
         datasets: [
           {
             label: 'Temperature (°C)',
-            borderColor: 'rgb(255, 99, 132)',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgb(220, 53, 69)',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
             borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
             data: [],
             yAxisID: 'y'
           },
           {
             label: 'Humidity (%)',
-            borderColor: 'rgb(54, 162, 235)',
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgb(13, 110, 253)',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
             borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
             data: [],
             yAxisID: 'y1'
           }
@@ -508,11 +548,24 @@ document.addEventListener('DOMContentLoaded', () => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          title: {
+            text: 'Temperature & Humidity'
+          }
+        },
         scales: {
           x: {
             type: 'time',
             time: {
-              unit: 'minute'
+              unit: 'minute',
+              tooltipFormat: 'HH:mm:ss',
+              displayFormats: {
+                minute: 'HH:mm'
+              }
             },
             title: {
               display: true,
@@ -524,7 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
               display: true,
               text: 'Temperature (°C)'
             },
-            position: 'left'
+            position: 'left',
+            suggestedMin: 10,
+            suggestedMax: 40
           },
           y1: {
             title: {
@@ -534,13 +589,15 @@ document.addEventListener('DOMContentLoaded', () => {
             position: 'right',
             grid: {
               drawOnChartArea: false
-            }
+            },
+            suggestedMin: 0,
+            suggestedMax: 100
           }
         }
       }
     });
-    
-    // CO2 and VOC Chart
+
+    // CO2 and VOC Chart with similar enhanced styling
     const co2VocCtx = document.getElementById('co2VocChart');
     charts.co2Voc = new Chart(co2VocCtx, {
       type: 'line',
@@ -548,17 +605,23 @@ document.addEventListener('DOMContentLoaded', () => {
         datasets: [
           {
             label: 'CO2 (ppm)',
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgb(255, 193, 7)',
+            backgroundColor: 'rgba(255, 193, 7, 0.1)',
             borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
             data: [],
             yAxisID: 'y'
           },
           {
             label: 'VOC (mg/m³)',
-            borderColor: 'rgb(153, 102, 255)',
-            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+            borderColor: 'rgb(108, 117, 125)',
+            backgroundColor: 'rgba(108, 117, 125, 0.1)',
             borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
             data: [],
             yAxisID: 'y1'
           }
@@ -567,11 +630,24 @@ document.addEventListener('DOMContentLoaded', () => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          title: {
+            text: 'CO2 & VOC Levels'
+          }
+        },
         scales: {
           x: {
             type: 'time',
             time: {
-              unit: 'minute'
+              unit: 'minute',
+              tooltipFormat: 'HH:mm:ss',
+              displayFormats: {
+                minute: 'HH:mm'
+              }
             },
             title: {
               display: true,
@@ -599,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Particulate Matter Chart
+    // Use similar enhanced styling for Particulate Matter Chart
     const pmCtx = document.getElementById('pmChart');
     charts.pm = new Chart(pmCtx, {
       type: 'line',
@@ -607,23 +683,32 @@ document.addEventListener('DOMContentLoaded', () => {
         datasets: [
           {
             label: 'PM1.0 (µg/m³)',
-            borderColor: 'rgb(255, 159, 64)',
-            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+            borderColor: 'rgb(25, 135, 84)',
+            backgroundColor: 'rgba(25, 135, 84, 0.1)',
             borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
             data: []
           },
           {
             label: 'PM2.5 (µg/m³)',
-            borderColor: 'rgb(255, 205, 86)',
-            backgroundColor: 'rgba(255, 205, 86, 0.2)',
+            borderColor: 'rgb(255, 193, 7)',
+            backgroundColor: 'rgba(255, 193, 7, 0.1)',
             borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
             data: []
           },
           {
             label: 'PM10 (µg/m³)',
-            borderColor: 'rgb(201, 203, 207)',
-            backgroundColor: 'rgba(201, 203, 207, 0.2)',
+            borderColor: 'rgb(220, 53, 69)',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
             borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
             data: []
           }
         ]
@@ -631,11 +716,24 @@ document.addEventListener('DOMContentLoaded', () => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          title: {
+            text: 'Particulate Matter'
+          }
+        },
         scales: {
           x: {
             type: 'time',
             time: {
-              unit: 'minute'
+              unit: 'minute',
+              tooltipFormat: 'HH:mm:ss',
+              displayFormats: {
+                minute: 'HH:mm'
+              }
             },
             title: {
               display: true,
@@ -660,9 +758,12 @@ document.addEventListener('DOMContentLoaded', () => {
         datasets: [
           {
             label: 'Battery (V)',
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgb(13, 202, 240)',
+            backgroundColor: 'rgba(13, 202, 240, 0.1)',
             borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
             data: []
           }
         ]
@@ -670,11 +771,24 @@ document.addEventListener('DOMContentLoaded', () => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          title: {
+            text: 'Battery Voltage'
+          }
+        },
         scales: {
           x: {
             type: 'time',
             time: {
-              unit: 'minute'
+              unit: 'minute',
+              tooltipFormat: 'HH:mm:ss',
+              displayFormats: {
+                minute: 'HH:mm'
+              }
             },
             title: {
               display: true,
@@ -771,10 +885,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Show error in UI
     errorMessage.textContent = error.message || 'An error occurred';
+    errorMessage.classList.add('pulse');
     
     // Auto-hide after 5 seconds
     setTimeout(() => {
       errorMessage.textContent = '';
+      errorMessage.classList.remove('pulse');
     }, 5000);
     
     // Show in CLI if connected to that context

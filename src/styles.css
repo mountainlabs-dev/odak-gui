@@ -1,61 +1,293 @@
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
+  color: #212529;
+  min-height: 100vh;
 }
 
+/* Header */
+header {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.app-logo {
+  height: 28px;
+  margin-right: 10px;
+}
+
+/* Cards & Containers */
 .chart-container {
   position: relative;
-  height: 300px;
+  height: 280px;
   width: 100%;
+  transition: height 0.3s ease;
 }
 
 .sidebar {
-  background-color: #f8f9fa;
+  background-color: #ffffff;
   height: calc(100vh - 70px);
   overflow-y: auto;
-}
-
-.cli-terminal {
-  background-color: #212529;
-  color: #f8f9fa;
-  font-family: 'Courier New', monospace;
-  padding: 10px;
-  border-radius: 5px;
-  height: 300px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.cli-command {
-  color: #28a745;
-}
-
-.cli-output {
-  color: #f8f9fa;
-}
-
-.cli-error {
-  color: #dc3545;
+  border-right: 1px solid #e9ecef;
+  padding-right: 0;
+  transition: all 0.3s ease;
 }
 
 .card {
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: none;
+  margin-bottom: 1.5rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+  padding: 0.75rem 1.25rem;
+  background-color: #ffffff;
+  border-top-left-radius: 10px !important;
+  border-top-right-radius: 10px !important;
+}
+
+.card-header-colored {
+  color: white;
+  border-bottom: none;
+}
+
+.card-header-primary {
+  background: linear-gradient(135deg, #3a8dff 0%, #0057ff 100%);
+}
+
+.card-header-info {
+  background: linear-gradient(135deg, #17a2b8 0%, #0f7a8a 100%);
+}
+
+.card-header-success {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+/* CLI Terminal */
+.cli-terminal {
+  background-color: #1e1e1e;
+  color: #f8f9fa;
+  font-family: 'JetBrains Mono', 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  height: 340px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.cli-command {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.cli-output {
+  color: #e0e0e0;
+}
+
+.cli-error {
+  color: #ff5252;
+}
+
+.cli-info {
+  color: #42a5f5;
+}
+
+.cli-warning {
+  color: #ffca28;
+}
+
+/* Status badges */
+.badge {
+  font-weight: 500;
+  padding: 0.5em 0.85em;
+  border-radius: 50rem;
 }
 
 .connected {
   background-color: #28a745 !important;
+  box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
 }
 
 .disconnected {
   background-color: #6c757d !important;
+  box-shadow: 0 2px 5px rgba(108, 117, 125, 0.3);
 }
 
 .error {
   background-color: #dc3545 !important;
+  box-shadow: 0 2px 5px rgba(220, 53, 69, 0.3);
+}
+
+/* Command Buttons */
+.cmd-btn {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-size: 0.85rem;
+}
+
+.cmd-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.cmd-btn-common {
+  border-color: #007bff;
+  color: #007bff;
+}
+
+.cmd-btn-common:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.cmd-btn-settings {
+  border-color: #6610f2;
+  color: #6610f2;
+}
+
+.cmd-btn-settings:hover {
+  background-color: #6610f2;
+  color: white;
+}
+
+.cmd-btn-calibration {
+  border-color: #fd7e14;
+  color: #fd7e14;
+}
+
+.cmd-btn-calibration:hover {
+  background-color: #fd7e14;
+  color: white;
+}
+
+.cmd-btn-logging {
+  border-color: #20c997;
+  color: #20c997;
+}
+
+.cmd-btn-logging:hover {
+  background-color: #20c997;
+  color: white;
+}
+
+/* Sensor Readings */
+.readings-table th {
+  width: 40%;
+  color: #495057;
+}
+
+.readings-table td {
+  font-weight: 500;
+  color: #212529;
+}
+
+.readings-value {
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Nav Tabs */
+.nav-tabs {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  color: #495057;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+  border-radius: 6px 6px 0 0;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+  color: #007bff;
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.nav-tabs .nav-link.active {
+  color: #007bff;
+  font-weight: 600;
+  border-bottom: 2px solid #007bff;
+  background: none;
+}
+
+/* Form Controls */
+.form-control, .form-select {
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ced4da;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
+.btn {
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Dashboard Data Cards */
+.data-card {
+  padding: 1rem;
+  text-align: center;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1rem;
+  background-color: #fff;
+}
+
+.data-card .value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #212529;
+  margin: 0.5rem 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.data-card .label {
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.data-card .icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.pulse {
+  animation: pulse 1.5s infinite;
 }
 
 /* Custom scrollbar */
@@ -66,25 +298,46 @@ body {
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
+  border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
+  background: #c1c9d6;
+  border-radius: 8px;
+  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #a8b2bf;
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .sidebar {
     height: auto;
+    border-right: none;
     margin-bottom: 20px;
   }
   
   .chart-container {
+    height: 240px;
+  }
+
+  .data-card .value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .chart-container {
     height: 200px;
+  }
+  
+  .sidebar {
+    padding-right: 15px;
+  }
+  
+  .cli-terminal {
+    height: 250px;
   }
 }
