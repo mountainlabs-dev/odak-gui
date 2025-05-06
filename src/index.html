@@ -1,12 +1,383 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Hello World!</title>
-    <link rel="stylesheet" href="index.css" />
-  </head>
-  <body>
-    <h1>💖 Hello World!</h1>
-    <p>Welcome to your Electron application.</p>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/; img-src 'self' data:; font-src 'self' https://cdn.jsdelivr.net/">
+  <title>ODAK Air Quality Monitor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="bg-dark text-white py-3">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <h4 class="m-0">ODAK Air Quality Monitor</h4>
+        </div>
+        <div class="col text-end">
+          <span id="error-message" class="text-danger"></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container-fluid mt-3">
+    <div class="row">
+      <!-- Sidebar -->
+      <div class="col-md-3 col-lg-2 sidebar">
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white">
+            Device Connection
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="port-select" class="form-label">Port</label>
+              <div class="d-flex">
+                <select id="port-select" class="form-select me-2"></select>
+                <button id="refresh-ports" class="btn btn-secondary" title="Refresh Ports">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+            </div>
+            <div class="mb-3 d-grid">
+              <button id="connect-btn" class="btn btn-success">Connect</button>
+              <button id="disconnect-btn" class="btn btn-danger mt-2" disabled>Disconnect</button>
+            </div>
+            <div id="connection-status" class="text-center mt-2">
+              <span class="badge bg-secondary">Not Connected</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header bg-info text-white">
+            Current Readings
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-sm table-striped mb-0">
+              <tbody>
+                <tr>
+                  <th>Temperature</th>
+                  <td id="reading-temp">--</td>
+                </tr>
+                <tr>
+                  <th>Humidity</th>
+                  <td id="reading-hum">--</td>
+                </tr>
+                <tr>
+                  <th>CO2</th>
+                  <td id="reading-co2">--</td>
+                </tr>
+                <tr>
+                  <th>VOC</th>
+                  <td id="reading-voc">--</td>
+                </tr>
+                <tr>
+                  <th>PM1.0</th>
+                  <td id="reading-pm1">--</td>
+                </tr>
+                <tr>
+                  <th>PM2.5</th>
+                  <td id="reading-pm25">--</td>
+                </tr>
+                <tr>
+                  <th>PM10</th>
+                  <td id="reading-pm10">--</td>
+                </tr>
+                <tr>
+                  <th>Battery</th>
+                  <td id="reading-batt">--</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white">
+            Data Logging
+          </div>
+          <div class="card-body">
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="logging-toggle">
+              <label class="form-check-label" for="logging-toggle">Enable Logging</label>
+            </div>
+            <div class="d-grid">
+              <button id="select-log-file" class="btn btn-outline-primary">Select Log File</button>
+            </div>
+            <div id="log-file-path" class="text-muted mt-2 small text-truncate"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="col-md-9 col-lg-10 main-content">
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab">Dashboard</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="cli-tab" data-bs-toggle="tab" data-bs-target="#cli" type="button" role="tab">CLI Interface</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="firmware-tab" data-bs-toggle="tab" data-bs-target="#firmware" type="button" role="tab">Firmware Update</button>
+          </li>
+        </ul>
+
+        <div class="tab-content p-3" id="mainTabsContent">
+          <!-- Dashboard Tab -->
+          <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+            <div class="row mb-3">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Sensor Data Visualization</span>
+                    <button id="clear-charts" class="btn btn-sm btn-outline-secondary">Clear Charts</button>
+                  </div>
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-md-6 mb-4">
+                        <div class="chart-container">
+                          <canvas id="tempHumChart"></canvas>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div class="chart-container">
+                          <canvas id="co2VocChart"></canvas>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div class="chart-container">
+                          <canvas id="pmChart"></canvas>
+                        </div>
+                      </div>
+                      <div class="col-md-6 mb-4">
+                        <div class="chart-container">
+                          <canvas id="batteryChart"></canvas>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLI Interface Tab -->
+          <div class="tab-pane fade" id="cli" role="tabpanel">
+            <div class="card">
+              <div class="card-header">Command Line Interface</div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <div id="cli-output" class="cli-terminal mb-2"></div>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="text" id="cli-input" class="form-control" placeholder="Enter command...">
+                    <button class="btn btn-primary" id="cli-send">Send</button>
+                  </div>
+                </div>
+                <div>
+                  <ul class="nav nav-tabs" id="commandTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link active" id="common-commands-tab" data-bs-toggle="tab" data-bs-target="#common-commands" type="button" role="tab">Common Commands</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="settings-commands-tab" data-bs-toggle="tab" data-bs-target="#settings-commands" type="button" role="tab">Settings</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="calibration-commands-tab" data-bs-toggle="tab" data-bs-target="#calibration-commands" type="button" role="tab">Calibration</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link" id="logging-commands-tab" data-bs-toggle="tab" data-bs-target="#logging-commands" type="button" role="tab">Logging</button>
+                    </li>
+                  </ul>
+                  <div class="tab-content p-2 border border-top-0 rounded-bottom mb-3" id="commandTabsContent">
+                    <!-- Common Commands Tab -->
+                    <div class="tab-pane fade show active" id="common-commands" role="tabpanel">
+                      <div class="row g-2">
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="HELP" data-immediate="true">HELP</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="GET_SETTINGS" data-immediate="true">GET_SETTINGS</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="SYS_RST" data-immediate="true">SYS_RST</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="EXIT" data-immediate="true">EXIT</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_PRINT" data-immediate="true">CAL_PRINT</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_RESET" data-immediate="true">CAL_RESET</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="POINT_RESET" data-immediate="true">POINT_RESET</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Settings Commands Tab -->
+                    <div class="tab-pane fade" id="settings-commands" role="tabpanel">
+                      <div class="row g-2">
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="SET_LANG">SET_LANG</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="SET_FREQ">SET_FREQ</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="SET_TYPE">SET_TYPE</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="SET_BUZZER">SET_BUZZER</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="SET_INSTALL">SET_INSTALL</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="SET_STARTUP">SET_STARTUP</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Calibration Commands Tab -->
+                    <div class="tab-pane fade" id="calibration-commands" role="tabpanel">
+                      <div class="row g-2">
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_CO2_OFFSET">CO2 Offset</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_CO2_MULT">CO2 Mult</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_PM1_OFFSET">PM1 Offset</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_PM1_MULT">PM1 Mult</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_PM25_OFFSET">PM2.5 Offset</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_PM25_MULT">PM2.5 Mult</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_PM10_OFFSET">PM10 Offset</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_PM10_MULT">PM10 Mult</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_VOC_OFFSET">VOC Offset</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_VOC_MULT">VOC Mult</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_TEMP_OFFSET">Temp Offset</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_TEMP_MULT">Temp Mult</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_HUM_OFFSET">Humidity Offset</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_HUM_MULT">Humidity Mult</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_BATT_OFFSET">Battery Offset</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="CAL_BATT_MULT">Battery Mult</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Logging Commands Tab -->
+                    <div class="tab-pane fade" id="logging-commands" role="tabpanel">
+                      <div class="row g-2">
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="LOG_TRACE" data-immediate="true">LOG_TRACE</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="LOG_DEBUG" data-immediate="true">LOG_DEBUG</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="LOG_INFO" data-immediate="true">LOG_INFO</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="LOG_WARN" data-immediate="true">LOG_WARN</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="LOG_ERROR" data-immediate="true">LOG_ERROR</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="LOG_FATAL" data-immediate="true">LOG_FATAL</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="LOG_OFF" data-immediate="true">LOG_OFF</button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm btn-outline-secondary cmd-btn" data-cmd="LOG_ON" data-immediate="true">LOG_ON</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Firmware Update Tab -->
+          <div class="tab-pane fade" id="firmware" role="tabpanel">
+            <div class="card">
+              <div class="card-header">Firmware Update</div>
+              <div class="card-body">
+                <div class="alert alert-info">
+                  <h5>Firmware Update Process</h5>
+                  <ol class="mb-0">
+                    <li>Connect your device</li>
+                    <li>Select the firmware file (.uf2)</li>
+                    <li>Click "Update Firmware"</li>
+                    <li>Wait for the update to complete</li>
+                  </ol>
+                </div>
+
+                <div class="mb-3">
+                  <label for="firmware-file" class="form-label">Firmware File</label>
+                  <div class="input-group">
+                    <input type="text" id="firmware-file" class="form-control" readonly placeholder="No file selected">
+                    <button class="btn btn-outline-secondary" id="select-firmware">Select File</button>
+                  </div>
+                </div>
+
+                <div class="progress mb-3 d-none" id="update-progress-container">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated" id="update-progress" role="progressbar" style="width: 0%"></div>
+                </div>
+
+                <div class="d-grid">
+                  <button id="update-firmware" class="btn btn-primary" disabled>Update Firmware</button>
+                </div>
+
+                <div id="update-status" class="mt-3"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="./renderer.js"></script>
+</body>
 </html>
