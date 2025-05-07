@@ -1,5 +1,26 @@
 // Renderer process for ODAK Air Quality Monitor GUI
+
+// Initialize chart containers
+const charts = {};
+const chartData = {
+  temperature: [],
+  humidity: [],
+  co2: [],
+  voc: [],
+  pm1: [],
+  pm25: [],
+  pm10: [],
+  battery: [],
+  aqi: []
+};
+
+// Import modules
+import { initCharts, addDataPoint, updateCharts, clearCharts } from './modules/chart-management.js';
+
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize all charts
+  initCharts();
+  
   // DOM Elements
   const portSelect = document.getElementById('port-select');
   const refreshPortsBtn = document.getElementById('refresh-ports');
@@ -31,12 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const readingPm25 = document.getElementById('reading-pm25');
   const readingPm10 = document.getElementById('reading-pm10');
   const readingBatt = document.getElementById('reading-batt');
+  const readingAqi = document.getElementById('reading-aqi'); // Add reference to AQI reading element if it exists
   
   // Additional DOM elements for enhanced UI
   const statTemp = document.getElementById('stat-temp');
   const statHumidity = document.getElementById('stat-humidity');
   const statCo2 = document.getElementById('stat-co2');
   const statPm25 = document.getElementById('stat-pm25');
+  const statAqi = document.getElementById('stat-aqi'); // Add reference to AQI stat element if it exists
 
   // Application state
   let isConnected = false;
@@ -44,20 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let commandHistory = [];
   let commandIndex = -1;
   let selectedFirmwarePath = null;
-  let charts = {};
-  let chartData = {
-    temperature: [],
-    humidity: [],
-    co2: [],
-    voc: [],
-    pm1: [],
-    pm25: [],
-    pm10: [],
-    battery: []
-  };
-  
-  // Initialize charts
-  initCharts();
   
   // Setup event listeners
   setupEventListeners();
@@ -398,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addDataPoint('voc', data.voc);
     }
     
-    // Handle both PM1 formats
+    // Handle PM1 format
     if (data.pm1 !== undefined) {
       readingPm1.textContent = `${data.pm1.toFixed(1)}`;
       addDataPoint('pm1', data.pm1);
@@ -415,36 +424,32 @@ document.addEventListener('DOMContentLoaded', () => {
       addDataPoint('pm25', data.pm25);
     }
     
+    // Add direct handling of AQI data from the device
+    if (data.aqi !== undefined) {
+      // Add AQI data point directly from the device data
+      addDataPoint('aqi', data.aqi);
+      
+      // Update AQI display elements if they exist
+      if (readingAqi) {
+        readingAqi.textContent = `${data.aqi}`;
+      }
+      
+      if (statAqi) {
+        statAqi.textContent = `${data.aqi}`;
+      }
+    }
+    
     if (data.pm10 !== undefined) {
       readingPm10.textContent = `${data.pm10.toFixed(1)}`;
       addDataPoint('pm10', data.pm10);
     }
     
-    // Battery could be percentage or voltage
     if (data.battery !== undefined) {
-      // If battery is in percentage (0-100) display as percentage, otherwise as voltage
-      if (data.battery > 0 && data.battery <= 100 && Number.isInteger(data.battery)) {
-        readingBatt.textContent = `${data.battery}%`;
-      } else {
-        readingBatt.textContent = `${data.battery.toFixed(2)}V`;
-      }
+      readingBatt.textContent = `${data.battery.toFixed(0)}`;
       addDataPoint('battery', data.battery);
     }
     
-    // Additional fields from the example JSON
-    if (data.pressure !== undefined) {
-      addToCliOutput(`Pressure: ${data.pressure.toFixed(2)} hPa`, 'cli-info');
-    }
-    
-    if (data.elevation !== undefined) {
-      addToCliOutput(`Elevation: ${data.elevation} m`, 'cli-info');
-    }
-    
-    if (data.aqi !== undefined) {
-      addToCliOutput(`Air Quality Index: ${data.aqi}`, 'cli-info');
-    }
-    
-    // Update charts
+    // Update all charts with new data points
     updateCharts();
   }
   
@@ -687,9 +692,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // CO2 and VOC Chart with similar enhanced styling
-    const co2VocCtx = document.getElementById('co2VocChart');
-    charts.co2Voc = new Chart(co2VocCtx, {
+    // CO2 Chart
+    const co2Ctx = document.getElementById('co2Chart');
+    charts.co2Voc = new Chart(co2Ctx, {
       type: 'line',
       data: {
         datasets: [
@@ -703,17 +708,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tension: 0.2,
             data: [],
             yAxisID: 'y'
-          },
-          {
-            label: 'VOC (mg/m³)',
-            borderColor: 'rgb(108, 117, 125)',
-            backgroundColor: 'rgba(108, 117, 125, 0.1)',
-            borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            tension: 0.2,
-            data: [],
-            yAxisID: 'y1'
           }
         ]
       },
@@ -726,7 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         plugins: {
           title: {
-            text: 'CO2 & VOC Levels'
+            text: 'CO2 Level'
           }
         },
         scales: {
@@ -750,8 +744,58 @@ document.addEventListener('DOMContentLoaded', () => {
               text: 'CO2 (ppm)'
             },
             position: 'left'
+          }
+        }
+      }
+    });
+
+    // CO2 and VOC Chart with similar enhanced styling
+    const vocCtx = document.getElementById('vocChart');
+    charts.voc = new Chart(vocCtx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'VOC (mg/m³)',
+            borderColor: 'rgb(108, 117, 125)',
+            backgroundColor: 'rgba(108, 117, 125, 0.1)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.2,
+            data: [],
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          title: {
+            text: 'VOC Level'
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'minute',
+              tooltipFormat: 'HH:mm:ss',
+              displayFormats: {
+                minute: 'HH:mm'
+              }
+            },
+            title: {
+              display: true,
+              text: 'Time'
+            }
           },
-          y1: {
+          y: {
             title: {
               display: true,
               text: 'VOC (mg/m³)'
@@ -894,43 +938,131 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+
+    // AQI Chart
+    const aqiCtx = document.getElementById('aqiChart');
+    charts.aqi = new Chart(aqiCtx, {
+        type: 'line',
+        data: {
+            datasets: [
+            {
+                label: 'Air Quality Index',
+                borderColor: 'rgb(111, 66, 193)',
+                backgroundColor: 'rgba(111, 66, 193, 0.1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                tension: 0.2,
+                data: []
+            }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+            mode: 'index',
+            intersect: false,
+            },
+            plugins: {
+            title: {
+                text: 'Air Quality Index (AQI)'
+            }
+            },
+            scales: {
+            x: {
+                type: 'time',
+                time: {
+                unit: 'minute',
+                tooltipFormat: 'HH:mm:ss',
+                displayFormats: {
+                    minute: 'HH:mm'
+                }
+                },
+                title: {
+                display: true,
+                text: 'Time'
+                }
+            },
+            y: {
+                title: {
+                display: true,
+                text: 'AQI'
+                },
+                suggestedMin: 0,
+                suggestedMax: 300
+            }
+            }
+        }
+    });
   }
   
   function addDataPoint(type, value) {
-    const now = new Date();
+    const timestamp = new Date();
     
-    switch (type) {
+    switch(type) {
       case 'temperature':
-        chartData.temperature.push({ x: now, y: value });
+        chartData.temperature.push({
+          x: timestamp,
+          y: value
+        });
         if (chartData.temperature.length > 100) chartData.temperature.shift();
         break;
       case 'humidity':
-        chartData.humidity.push({ x: now, y: value });
+        chartData.humidity.push({
+          x: timestamp,
+          y: value
+        });
         if (chartData.humidity.length > 100) chartData.humidity.shift();
         break;
       case 'co2':
-        chartData.co2.push({ x: now, y: value });
+        chartData.co2.push({
+          x: timestamp,
+          y: value
+        });
         if (chartData.co2.length > 100) chartData.co2.shift();
         break;
       case 'voc':
-        chartData.voc.push({ x: now, y: value });
+        chartData.voc.push({
+          x: timestamp,
+          y: value
+        });
         if (chartData.voc.length > 100) chartData.voc.shift();
         break;
       case 'pm1':
-        chartData.pm1.push({ x: now, y: value });
+        chartData.pm1.push({
+          x: timestamp,
+          y: value
+        });
         if (chartData.pm1.length > 100) chartData.pm1.shift();
         break;
       case 'pm25':
-        chartData.pm25.push({ x: now, y: value });
+        chartData.pm25.push({
+          x: timestamp,
+          y: value
+        });
         if (chartData.pm25.length > 100) chartData.pm25.shift();
         break;
       case 'pm10':
-        chartData.pm10.push({ x: now, y: value });
+        chartData.pm10.push({
+          x: timestamp,
+          y: value
+        });
         if (chartData.pm10.length > 100) chartData.pm10.shift();
         break;
       case 'battery':
-        chartData.battery.push({ x: now, y: value });
+        chartData.battery.push({
+          x: timestamp,
+          y: value
+        });
         if (chartData.battery.length > 100) chartData.battery.shift();
+        break;
+      case 'aqi':
+        chartData.aqi.push({
+          x: timestamp,
+          y: value
+        });
+        if (chartData.aqi.length > 100) chartData.aqi.shift();
         break;
     }
   }
@@ -941,10 +1073,13 @@ document.addEventListener('DOMContentLoaded', () => {
     charts.tempHum.data.datasets[1].data = chartData.humidity;
     charts.tempHum.update();
     
-    // CO2 and VOC
+    // CO2 - fix reference to the chart object
     charts.co2Voc.data.datasets[0].data = chartData.co2;
-    charts.co2Voc.data.datasets[1].data = chartData.voc;
     charts.co2Voc.update();
+
+    // VOC
+    charts.voc.data.datasets[0].data = chartData.voc;
+    charts.voc.update();
     
     // Particulate Matter
     charts.pm.data.datasets[0].data = chartData.pm1;
@@ -955,6 +1090,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Battery
     charts.battery.data.datasets[0].data = chartData.battery;
     charts.battery.update();
+
+    // AQI
+    charts.aqi.data.datasets[0].data = chartData.aqi;
+    charts.aqi.update();
   }
   
   function clearCharts() {

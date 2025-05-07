@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/ https://fonts.googleapis.com/; font-src 'self' https://cdn.jsdelivr.net/ https://fonts.gstatic.com/; img-src 'self' data: https://cdn.jsdelivr.net/">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/ https://fonts.googleapis.com/; font-src 'self' https://cdn.jsdelivr.net/ https://fonts.gstatic.com/; img-src 'self' data: https://cdn.jsdelivr.net/">
   <title>ODAK Air Quality Monitor</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
@@ -92,7 +92,11 @@
                   <td><span id="reading-pm10" class="readings-value">--</span> µg/m³</td>
                 </tr>
                 <tr>
-                  <th><i class="bi bi-battery-half text-success me-1"></i> Battery</th>
+                  <th><i class="bi bi-lungs text-purple me-1"></i> AQI</th>
+                  <td><span id="reading-aqi" class="readings-value">--</span></td>
+                </tr>
+                <tr>
+                  <th><i class="bi bi-battery-half text-info me-1"></i> Battery</th>
                   <td><span id="reading-batt" class="readings-value">--</span> V</td>
                 </tr>
               </tbody>
@@ -142,33 +146,60 @@
           <!-- Dashboard Tab -->
           <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
             <!-- Quick Stats Cards -->
-            <div class="row mb-4">
-              <div class="col-xl-3 col-md-6">
-                <div class="data-card">
-                  <div class="icon text-primary"><i class="bi bi-thermometer-half"></i></div>
-                  <div class="label">Temperature</div>
-                  <div id="stat-temp" class="value">-- °C</div>
+            <div class="row gx-3 mb-4">
+              <div class="col">
+                <div class="stat-card bg-light-danger">
+                  <div class="stat-card-body">
+                    <i class="bi bi-thermometer-half stat-icon text-danger"></i>
+                    <div class="stat-card-info">
+                      <h5>Temperature</h5>
+                      <h3 id="stat-temp">--</h3>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="col-xl-3 col-md-6">
-                <div class="data-card">
-                  <div class="icon text-info"><i class="bi bi-droplet-half"></i></div>
-                  <div class="label">Humidity</div>
-                  <div id="stat-humidity" class="value">-- %</div>
+              <div class="col">
+                <div class="stat-card bg-light-primary">
+                  <div class="stat-card-body">
+                    <i class="bi bi-moisture stat-icon text-primary"></i>
+                    <div class="stat-card-info">
+                      <h5>Humidity</h5>
+                      <h3 id="stat-humidity">--</h3>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="col-xl-3 col-md-6">
-                <div class="data-card">
-                  <div class="icon text-warning"><i class="bi bi-cloud-haze2"></i></div>
-                  <div class="label">CO<sub>2</sub></div>
-                  <div id="stat-co2" class="value">-- ppm</div>
+              <div class="col">
+                <div class="stat-card bg-light-warning">
+                  <div class="stat-card-body">
+                    <i class="bi bi-cloud-fog stat-icon text-warning"></i>
+                    <div class="stat-card-info">
+                      <h5>CO<sub>2</sub></h5>
+                      <h3 id="stat-co2">--</h3>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="col-xl-3 col-md-6">
-                <div class="data-card">
-                  <div class="icon text-danger"><i class="bi bi-dice-2"></i></div>
-                  <div class="label">PM2.5</div>
-                  <div id="stat-pm25" class="value">-- µg/m³</div>
+              <div class="col">
+                <div class="stat-card bg-light-warning">
+                  <div class="stat-card-body">
+                    <i class="bi bi-cloud stat-icon text-warning"></i>
+                    <div class="stat-card-info">
+                      <h5>PM2.5</h5>
+                      <h3 id="stat-pm25">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="stat-card bg-light-purple">
+                  <div class="stat-card-body">
+                    <i class="bi bi-wind stat-icon text-purple"></i>
+                    <div class="stat-card-info">
+                      <h5>AQI</h5>
+                      <h3 id="stat-aqi">--</h3>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -190,12 +221,22 @@
                   </div>
                   <div class="col-lg-6 mb-4">
                     <div class="chart-container">
-                      <canvas id="co2VocChart"></canvas>
+                      <canvas id="co2Chart"></canvas>
+                    </div>
+                  </div>
+                  <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                      <canvas id="vocChart"></canvas>
                     </div>
                   </div>
                   <div class="col-lg-6 mb-4">
                     <div class="chart-container">
                       <canvas id="pmChart"></canvas>
+                    </div>
+                  </div>
+                  <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                      <canvas id="aqiChart"></canvas>
                     </div>
                   </div>
                   <div class="col-lg-6 mb-4">
@@ -452,6 +493,6 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-  <script src="./renderer.js"></script>
+  <script src="./renderer.js" type="module"></script>
 </body>
 </html>

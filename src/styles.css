@@ -279,6 +279,73 @@ header {
   margin-bottom: 0.5rem;
 }
 
+/* Quick Stats Cards */
+.stat-card {
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  height: 100%;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card-body {
+  display: flex;
+  align-items: center;
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  margin-right: 1rem;
+}
+
+.stat-card-info {
+  flex-grow: 1;
+}
+
+.stat-card-info h5 {
+  font-size: 0.9rem;
+  margin: 0 0 0.25rem 0;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.stat-card-info h3 {
+  font-size: 1.5rem;
+  margin: 0;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Background colors for stat cards */
+.bg-light-primary {
+  background-color: rgba(13, 110, 253, 0.1);
+}
+
+.bg-light-danger {
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.bg-light-warning {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.bg-light-success {
+  background-color: rgba(25, 135, 84, 0.1);
+}
+
+.bg-light-purple {
+  background-color: rgba(111, 66, 193, 0.1);
+}
+
+.text-purple {
+  color: #6f42c1;
+}
+
 /* Animations */
 @keyframes pulse {
   0% { transform: scale(1); }
@@ -326,6 +393,10 @@ header {
   .data-card .value {
     font-size: 1.5rem;
   }
+  
+  .stat-card-info h3 {
+    font-size: 1.3rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -339,5 +410,18 @@ header {
   
   .cli-terminal {
     height: 250px;
+  }
+  
+  .stat-card {
+    padding: 0.75rem;
+  }
+  
+  .stat-icon {
+    font-size: 2rem;
+    margin-right: 0.75rem;
+  }
+  
+  .stat-card-info h3 {
+    font-size: 1.2rem;
   }
 }
