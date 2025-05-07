@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         datasets: [
           {
             label: 'Temperature (°C)',
-            borderColor: 'rgb(220, 53, 69)',
+            borderColor: 'rgb(220, 53, 69)', // Danger/red - matching stat card
             backgroundColor: 'rgba(220, 53, 69, 0.1)',
             borderWidth: 2,
             pointRadius: 3,
@@ -624,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
           },
           {
             label: 'Humidity (%)',
-            borderColor: 'rgb(13, 110, 253)',
+            borderColor: 'rgb(13, 110, 253)', // Primary/blue - matching stat card
             backgroundColor: 'rgba(13, 110, 253, 0.1)',
             borderWidth: 2,
             pointRadius: 3,
@@ -695,8 +695,8 @@ document.addEventListener('DOMContentLoaded', () => {
         datasets: [
           {
             label: 'CO2 (ppm)',
-            borderColor: 'rgb(255, 193, 7)',
-            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+            borderColor: 'rgb(255, 152, 0)', // Amber - matching stat card
+            backgroundColor: 'rgba(255, 152, 0, 0.1)',
             borderWidth: 2,
             pointRadius: 3,
             pointHoverRadius: 5,
@@ -744,7 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // CO2 and VOC Chart with similar enhanced styling
+    // VOC Chart with updated consistent styling
     const vocCtx = document.getElementById('vocChart');
     charts.voc = new Chart(vocCtx, {
       type: 'line',
@@ -752,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
         datasets: [
           {
             label: 'VOC (mg/m³)',
-            borderColor: 'rgb(108, 117, 125)',
+            borderColor: 'rgb(108, 117, 125)', // Gray - matching stat card
             backgroundColor: 'rgba(108, 117, 125, 0.1)',
             borderWidth: 2,
             pointRadius: 3,
@@ -804,7 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Use similar enhanced styling for Particulate Matter Chart
+    // Use updated styling for Particulate Matter Chart
     const pmCtx = document.getElementById('pmChart');
     charts.pm = new Chart(pmCtx, {
       type: 'line',
@@ -812,8 +812,8 @@ document.addEventListener('DOMContentLoaded', () => {
         datasets: [
           {
             label: 'PM1.0 (µg/m³)',
-            borderColor: 'rgb(25, 135, 84)',
-            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+            borderColor: 'rgb(25, 135, 84)', // Green - matching stat card
+            backgroundColor: 'rgba(124, 255, 112, 0.1)',
             borderWidth: 2,
             pointRadius: 3,
             pointHoverRadius: 5,
@@ -822,8 +822,8 @@ document.addEventListener('DOMContentLoaded', () => {
           },
           {
             label: 'PM2.5 (µg/m³)',
-            borderColor: 'rgb(255, 193, 7)',
-            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+            borderColor: 'rgb(255, 190, 93)', // Amber - matching stat card
+            backgroundColor: 'rgba(255, 165, 0, 0.1)',
             borderWidth: 2,
             pointRadius: 3,
             pointHoverRadius: 5,
@@ -832,8 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
           },
           {
             label: 'PM10 (µg/m³)',
-            borderColor: 'rgb(220, 53, 69)',
-            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+            borderColor: 'rgb(153, 132, 13)', // Danger/red - matching stat card
+            backgroundColor: 'rgba(255, 255, 0, 0.1)',
             borderWidth: 2,
             pointRadius: 3,
             pointHoverRadius: 5,
@@ -886,8 +886,8 @@ document.addEventListener('DOMContentLoaded', () => {
       data: {
         datasets: [
           {
-            label: 'Battery (V)',
-            borderColor: 'rgb(13, 202, 240)',
+            label: 'Battery (%)',
+            borderColor: 'rgb(13, 202, 240)', // Cyan - matching stat card
             backgroundColor: 'rgba(13, 202, 240, 0.1)',
             borderWidth: 2,
             pointRadius: 3,
@@ -942,7 +942,7 @@ document.addEventListener('DOMContentLoaded', () => {
             datasets: [
             {
                 label: 'Air Quality Index',
-                borderColor: 'rgb(111, 66, 193)',
+                borderColor: 'rgb(111, 66, 193)', // Purple - matching stat card
                 backgroundColor: 'rgba(111, 66, 193, 0.1)',
                 borderWidth: 2,
                 pointRadius: 3,
@@ -999,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
             datasets: [
                 {
                     label: 'Pressure (hPa)',
-                    borderColor: 'rgb(145, 70, 255)',
+                    borderColor: 'rgb(145, 70, 255)', // Violet - matching stat card
                     backgroundColor: 'rgba(145, 70, 255, 0.1)',
                     borderWidth: 2,
                     pointRadius: 3,
@@ -1054,8 +1054,8 @@ document.addEventListener('DOMContentLoaded', () => {
             datasets: [
                 {
                     label: 'Elevation (m)',
-                    borderColor: 'rgb(40, 167, 69)',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    borderColor: 'rgb(40, 167, 89)', // Forest green - matching stat card
+                    backgroundColor: 'rgba(0, 255, 136, 0.1)',
                     borderWidth: 2,
                     pointRadius: 3,
                     pointHoverRadius: 5,

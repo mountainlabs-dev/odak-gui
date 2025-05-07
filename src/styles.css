@@ -342,8 +342,76 @@ header {
   background-color: rgba(111, 66, 193, 0.1);
 }
 
+.bg-light-amber {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.bg-light-gray {
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
+.bg-light-cyan {
+  background-color: rgba(13, 202, 240, 0.1);
+}
+
+.bg-light-violet {
+  background-color: rgba(145, 70, 255, 0.1);
+}
+
+.bg-light-forest {
+  background-color: rgba(0, 255, 136, 0.1);
+}
+
+.bg-light-secondary {
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
+.bg-light-green {
+  background-color: rgba(124, 255, 112, 0.1);
+}
+
+.bg-light-yellow {
+  background-color: rgba(255, 255, 0, 0.1);
+}
+
+.bg-light-orange {
+  background-color: rgba(255, 165, 0, 0.1);
+}
+
 .text-purple {
   color: #6f42c1;
+}
+
+.text-amber {
+  color: #FF9800;
+}
+
+.text-gray {
+  color: #6c757d;
+}
+
+.text-cyan {
+  color: #0dcaf0;
+}
+
+.text-violet {
+  color: #9146ff;
+}
+
+.text-green {
+  color: #198754;
+}
+
+.text-forest {
+  color: #28a745;
+}
+
+.text-orange {
+  color: #ff9800;
+}
+
+.text-yellow {
+  color: #d6d32e;
 }
 
 /* Animations */

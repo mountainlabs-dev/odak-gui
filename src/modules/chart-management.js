@@ -53,8 +53,8 @@ console.log('DEBUG: Creating temperature/humidity chart');
           datasets: [
             {
               label: 'Temperature (°C)',
-              borderColor: 'rgb(220, 53, 69)',
-              backgroundColor: 'rgba(220, 53, 69, 0.1)',
+              borderColor: 'rgb(255, 127, 0)',  // Updated to orange to match stat card
+              backgroundColor: 'rgba(255, 127, 0, 0.1)',
               borderWidth: 2,
               pointRadius: 3,
               pointHoverRadius: 5,
@@ -274,8 +274,8 @@ console.log('DEBUG: Temperature/humidity chart created successfully');
           datasets: [
             {
               label: 'PM1.0 (µg/m³)',
-              borderColor: 'rgb(25, 135, 84)',
-              backgroundColor: 'rgba(25, 135, 84, 0.1)',
+              borderColor: 'rgb(20, 184, 166)',
+              backgroundColor: 'rgba(20, 184, 166, 0.1)',
               borderWidth: 2,
               pointRadius: 3,
               pointHoverRadius: 5,
@@ -294,8 +294,8 @@ console.log('DEBUG: Temperature/humidity chart created successfully');
             },
             {
               label: 'PM10 (µg/m³)',
-              borderColor: 'rgb(220, 53, 69)',
-              backgroundColor: 'rgba(220, 53, 69, 0.1)',
+              borderColor: 'rgb(220, 38, 38)',
+              backgroundColor: 'rgba(220, 38, 38, 0.1)',
               borderWidth: 2,
               pointRadius: 3,
               pointHoverRadius: 5,
