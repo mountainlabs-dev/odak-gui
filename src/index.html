@@ -65,39 +65,39 @@
               <tbody>
                 <tr>
                   <th><i class="bi bi-thermometer-half text-danger me-1"></i> Temperature</th>
-                  <td><span id="reading-temp" class="readings-value">--</span> °C</td>
+                  <td><span id="reading-temp" class="readings-value">--</span></td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-droplet-half text-primary me-1"></i> Humidity</th>
-                  <td><span id="reading-hum" class="readings-value">--</span> %</td>
+                  <td><span id="reading-hum" class="readings-value">--</span></td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-cloud-haze2 text-secondary me-1"></i> CO<sub>2</sub></th>
-                  <td><span id="reading-co2" class="readings-value">--</span> ppm</td>
+                  <td><span id="reading-co2" class="readings-value">--</span></td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-wind text-info me-1"></i> VOC</th>
-                  <td><span id="reading-voc" class="readings-value">--</span> mg/m³</td>
+                  <td><span id="reading-voc" class="readings-value">--</span></td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-dice-1 text-warning me-1"></i> PM1.0</th>
-                  <td><span id="reading-pm1" class="readings-value">--</span> µg/m³</td>
+                  <td><span id="reading-pm1" class="readings-value">--</span></td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-dice-2 text-warning me-1"></i> PM2.5</th>
-                  <td><span id="reading-pm25" class="readings-value">--</span> µg/m³</td>
+                  <td><span id="reading-pm25" class="readings-value">--</span> </td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-dice-3 text-warning me-1"></i> PM10</th>
-                  <td><span id="reading-pm10" class="readings-value">--</span> µg/m³</td>
+                  <td><span id="reading-pm10" class="readings-value">--</span></td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-speedometer text-success me-1"></i> Pressure</th>
-                  <td><span id="reading-pressure" class="readings-value">--</span> hPa</td>
+                  <td><span id="reading-pressure" class="readings-value">--</span></td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-geo-alt text-secondary me-1"></i> Elevation</th>
-                  <td><span id="reading-elevation" class="readings-value">--</span> m</td>
+                  <td><span id="reading-elevation" class="readings-value">--</span></td>
                 </tr>
                 <tr>
                   <th><i class="bi bi-lungs text-purple me-1"></i> AQI</th>
@@ -105,7 +105,7 @@
                 </tr>
                 <tr>
                   <th><i class="bi bi-battery-half text-info me-1"></i> Battery</th>
-                  <td><span id="reading-batt" class="readings-value">--</span> V</td>
+                  <td><span id="reading-batt" class="readings-value">--</span></td>
                 </tr>
               </tbody>
             </table>
@@ -214,54 +214,54 @@
 
             <!-- Charts -->
             <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-graph-up me-1"></i> Sensor Data Visualization</span>
-                <button id="clear-charts" class="btn btn-sm btn-outline-secondary">
-                  <i class="bi bi-eraser me-1"></i> Clear Charts
-                </button>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                      <canvas id="tempHumChart"></canvas>
-                    </div>
-                  </div>
-                  <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                      <canvas id="co2Chart"></canvas>
-                    </div>
-                  </div>
-                  <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                      <canvas id="vocChart"></canvas>
-                    </div>
-                  </div>
-                  <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                      <canvas id="pmChart"></canvas>
-                    </div>
-                  </div>
-                  <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                      <canvas id="aqiChart"></canvas>
-                    </div>
-                  </div>
-                  <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                      <canvas id="pressureChart"></canvas>
-                    </div>
-                  </div>
-                  <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                      <canvas id="elevationChart"></canvas>
-                    </div>
-                  </div>
-                  <div class="col-lg-6 mb-4">
-                    <div class="chart-container">
-                      <canvas id="batteryChart"></canvas>
-                    </div>
-                  </div>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-graph-up me-1"></i> Sensor Data Visualization</span>
+                    <button id="clear-charts" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-eraser me-1"></i> Clear Charts
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-6 mb-4">
+                            <div class="chart-container">
+                                <canvas id="co2Chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                          <div class="chart-container">
+                            <canvas id="aqiChart"></canvas>
+                          </div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                          <div class="chart-container">
+                            <canvas id="vocChart"></canvas>
+                          </div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div class="chart-container">
+                            <canvas id="tempHumChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div class="chart-container">
+                            <canvas id="pmChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div class="chart-container">
+                            <canvas id="pressureChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div class="chart-container">
+                            <canvas id="elevationChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div class="chart-container">
+                            <canvas id="batteryChart"></canvas>
+                            </div>
+                        </div>
                 </div>
               </div>
             </div>

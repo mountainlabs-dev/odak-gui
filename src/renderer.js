@@ -390,21 +390,21 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Sensor Data:', data);
     // Update current readings display
     if (data.temperature !== undefined) {
-      readingTemp.textContent = `${data.temperature.toFixed(1)}`;
+      readingTemp.textContent = `${data.temperature.toFixed(1)} °C`;
       statTemp.textContent = `${data.temperature.toFixed(1)} °C`;
       addDataPoint('temperature', data.temperature);
       console.log('Temperature:', data.temperature);
     }
     
     if (data.humidity !== undefined) {
-      readingHum.textContent = `${data.humidity.toFixed(1)}`;
+      readingHum.textContent = `${data.humidity.toFixed(1)} %`;
       statHumidity.textContent = `${data.humidity.toFixed(1)} %`;
       addDataPoint('humidity', data.humidity);
       console.log('Humidity:', data.humidity);
     }
     
     if (data.co2 !== undefined) {
-      readingCo2.textContent = `${data.co2.toFixed(0)}`;
+      readingCo2.textContent = `${data.co2.toFixed(0)} ppm`;
       statCo2.textContent = `${data.co2.toFixed(0)} ppm`;
       addDataPoint('co2', data.co2);
       console.log('CO2:', data.co2);
@@ -425,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Handle PM2.5 format
     if (data['pm2.5'] !== undefined) {
-      readingPm25.textContent = `${data['pm2.5'].toFixed(1)}`;
+      readingPm25.textContent = `${data['pm2.5'].toFixed(1)} µg/m³`;
       statPm25.textContent = `${data['pm2.5'].toFixed(1)} µg/m³`;
       addDataPoint('pm25', data['pm2.5']);
       console.log('PM2.5:', data['pm2.5']);
