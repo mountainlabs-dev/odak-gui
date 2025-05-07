@@ -12,9 +12,10 @@ export const connectionStatus = document.getElementById('connection-status');
 
 // CLI interface elements
 export const cliInput = document.getElementById('cli-input');
-export const cliSendBtn = document.getElementById('cli-send-btn');
+export const cliSendBtn = document.getElementById('cli-send');
 export const cliOutput = document.getElementById('cli-output');
 export const cmdBtns = document.querySelectorAll('.cmd-btn');
+export const clearConsoleBtn = document.getElementById('clear-console');
 
 // Data visualization elements
 export const dataContainer = document.getElementById('data-container');

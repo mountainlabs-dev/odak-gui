@@ -17,6 +17,7 @@ export function initCliInterface() {
   // Setup event listeners
   elements.cliSendBtn.addEventListener('click', sendCommand);
   elements.cliInput.addEventListener('keydown', handleCliInputKeydown);
+  elements.clearConsoleBtn.addEventListener('click', clearOutput);
   
   // Setup command button listeners
   elements.cmdBtns.forEach(btn => {

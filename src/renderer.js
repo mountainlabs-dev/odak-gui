@@ -80,6 +80,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // CLI Interface
     cliSendBtn.addEventListener('click', sendCommand);
     cliInput.addEventListener('keydown', handleCliInputKeydown);
+    
+    // Add clear console button listener
+    const clearConsoleBtn = document.getElementById('clear-console');
+    if (clearConsoleBtn) {
+      clearConsoleBtn.addEventListener('click', () => {
+        clearCliOutput();
+      });
+    }
+    
     cmdBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const cmd = btn.dataset.cmd;
@@ -250,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         disconnectBtn.disabled = !isConnected;
         displayError({ message: 'Failed to disconnect', details: result.error });
       }
-    } catch (error) {
+} catch (error) {
       // Reset buttons on error
       connectBtn.disabled = isConnected;
       disconnectBtn.disabled = !isConnected;
@@ -1239,6 +1248,13 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCharts();
     
     addToCliOutput('Charts cleared', 'cli-command');
+  }
+  
+  // Function to clear the CLI output
+  function clearCliOutput() {
+    cliOutput.innerHTML = '';
+    // You can add a small message to indicate the console was cleared
+    addToCliOutput('Console cleared', 'cli-info');
   }
   
   // Error handling
