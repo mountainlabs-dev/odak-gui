@@ -45,26 +45,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearChartsBtn = document.getElementById('clear-charts');
   const errorMessage = document.getElementById('error-message');
   
-  // Sensor reading elements
-  const readingTemp = document.getElementById('reading-temp');
-  const readingHum = document.getElementById('reading-hum');
-  const readingCo2 = document.getElementById('reading-co2');
-  const readingVoc = document.getElementById('reading-voc');
-  const readingPm1 = document.getElementById('reading-pm1');
-  const readingPm25 = document.getElementById('reading-pm25');
-  const readingPm10 = document.getElementById('reading-pm10');
-  const readingPressure = document.getElementById('reading-pressure');
-  const readingElevation = document.getElementById('reading-elevation');
-  const readingBatt = document.getElementById('reading-batt');
-  const readingAqi = document.getElementById('reading-aqi'); // Add reference to AQI reading element if it exists
-  
   // Additional DOM elements for enhanced UI
+  const statCo2 = document.getElementById('stat-co2');
+  const statAqi = document.getElementById('stat-aqi');
+  const statVoc = document.getElementById('stat-voc');
   const statTemp = document.getElementById('stat-temp');
   const statHumidity = document.getElementById('stat-humidity');
-  const statCo2 = document.getElementById('stat-co2');
+  const statPm1 = document.getElementById('stat-pm1');
   const statPm25 = document.getElementById('stat-pm25');
-  const statAqi = document.getElementById('stat-aqi'); // Add reference to AQI stat element if it exists
-
+  const statPm10 = document.getElementById('stat-pm10');
+  const statPressure = document.getElementById('stat-pressure');
+  const statElevation = document.getElementById('stat-elevation');
+  const statBattery = document.getElementById('stat-batt');
+  
   // Application state
   let isConnected = false;
   let selectedPort = null;
@@ -390,84 +383,66 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Sensor Data:', data);
     // Update current readings display
     if (data.temperature !== undefined) {
-      readingTemp.textContent = `${data.temperature.toFixed(1)} °C`;
       statTemp.textContent = `${data.temperature.toFixed(1)} °C`;
       addDataPoint('temperature', data.temperature);
-      console.log('Temperature:', data.temperature);
     }
     
     if (data.humidity !== undefined) {
-      readingHum.textContent = `${data.humidity.toFixed(1)} %`;
       statHumidity.textContent = `${data.humidity.toFixed(1)} %`;
       addDataPoint('humidity', data.humidity);
-      console.log('Humidity:', data.humidity);
     }
     
     if (data.co2 !== undefined) {
-      readingCo2.textContent = `${data.co2.toFixed(0)} ppm`;
       statCo2.textContent = `${data.co2.toFixed(0)} ppm`;
       addDataPoint('co2', data.co2);
-      console.log('CO2:', data.co2);
     }
     
     if (data.voc !== undefined) {
-      readingVoc.textContent = `${data.voc.toFixed(2)} ppm`;
+      statVoc.textContent = `${data.voc.toFixed(2)} ppm`;
       addDataPoint('voc', data.voc);
-      console.log('VOC:', data.voc);
     }
     
     // Handle PM1 format
     if (data.pm1 !== undefined) {
-      readingPm1.textContent = `${data.pm1.toFixed(1)} µg/m³`;
+      statPm1.textContent = `${data.pm1.toFixed(1)} µg/m³`;
       addDataPoint('pm1', data.pm1);
-      console.log('PM1:', data.pm1);
     }
     
     // Handle PM2.5 format
     if (data['pm2.5'] !== undefined) {
-      readingPm25.textContent = `${data['pm2.5'].toFixed(1)} µg/m³`;
       statPm25.textContent = `${data['pm2.5'].toFixed(1)} µg/m³`;
       addDataPoint('pm25', data['pm2.5']);
-      console.log('PM2.5:', data['pm2.5']);
     }
     
     // Handle PM10 format
     if (data.pm10 !== undefined) {
-      readingPm10.textContent = `${data.pm10.toFixed(1)} µg/m³`;
+      statPm10.textContent = `${data.pm10.toFixed(1)} µg/m³`;
       addDataPoint('pm10', data.pm10);
-      console.log('PM10:', data.pm10);
     }
     
     // Handle AQI if available
     if (data.aqi !== undefined) {
-      readingAqi.textContent = `${data.aqi.toFixed(0)}`;
-      if (statAqi) statAqi.textContent = `${data.aqi.toFixed(0)}`;
+      statAqi.textContent = `${data.aqi.toFixed(0)}`;
       addDataPoint('aqi', data.aqi);
-      console.log('AQI:', data.aqi);
     }
     
     // Handle pressure if available
     if (data.pressure !== undefined) {
-      readingPressure.textContent = `${data.pressure.toFixed(1)} hPa`;
+      statPressure.textContent = `${data.pressure.toFixed(1)} hPa`;
       addDataPoint('pressure', data.pressure);
-      console.log('Pressure:', data.pressure);
     }
     
     // Handle elevation if available
     if (data.elevation !== undefined) {
-      readingElevation.textContent = `${data.elevation.toFixed(1)} m`;
+      statElevation.textContent = `${data.elevation.toFixed(1)} m`;
       addDataPoint('elevation', data.elevation);
-      console.log('Elevation:', data.elevation);
     }
 
     // Handle battery if available
     if (data.battery !== undefined) {
-      readingBatt.textContent = `${data.battery.toFixed(2)} %`;
+      statBattery.textContent = `${data.battery.toFixed(1)} %`;
       addDataPoint('battery', data.battery);
-      console.log('Battery:', data.battery);
     }
-
-    console.log('Start update charts:', data);
     
     // Update all charts with the new data
     updateCharts();

@@ -55,63 +55,6 @@
           </div>
         </div>
 
-        <!-- Sensor Readings Card -->
-        <div class="card">
-          <div class="card-header card-header-colored card-header-info">
-            <i class="bi bi-activity me-1"></i> Current Readings
-          </div>
-          <div class="card-body p-0">
-            <table class="table table-sm mb-0 readings-table">
-              <tbody>
-                <tr>
-                  <th><i class="bi bi-thermometer-half text-danger me-1"></i> Temperature</th>
-                  <td><span id="reading-temp" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-droplet-half text-primary me-1"></i> Humidity</th>
-                  <td><span id="reading-hum" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-cloud-haze2 text-secondary me-1"></i> CO<sub>2</sub></th>
-                  <td><span id="reading-co2" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-wind text-info me-1"></i> VOC</th>
-                  <td><span id="reading-voc" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-dice-1 text-warning me-1"></i> PM1.0</th>
-                  <td><span id="reading-pm1" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-dice-2 text-warning me-1"></i> PM2.5</th>
-                  <td><span id="reading-pm25" class="readings-value">--</span> </td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-dice-3 text-warning me-1"></i> PM10</th>
-                  <td><span id="reading-pm10" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-speedometer text-success me-1"></i> Pressure</th>
-                  <td><span id="reading-pressure" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-geo-alt text-secondary me-1"></i> Elevation</th>
-                  <td><span id="reading-elevation" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-lungs text-purple me-1"></i> AQI</th>
-                  <td><span id="reading-aqi" class="readings-value">--</span></td>
-                </tr>
-                <tr>
-                  <th><i class="bi bi-battery-half text-info me-1"></i> Battery</th>
-                  <td><span id="reading-batt" class="readings-value">--</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
         <!-- Data Logging Card -->
         <div class="card">
           <div class="card-header card-header-colored card-header-primary">
@@ -155,29 +98,7 @@
           <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
             <!-- Quick Stats Cards -->
             <div class="row gx-3 mb-4">
-              <div class="col">
-                <div class="stat-card bg-light-danger">
-                  <div class="stat-card-body">
-                    <i class="bi bi-thermometer-half stat-icon text-danger"></i>
-                    <div class="stat-card-info">
-                      <h5>Temperature</h5>
-                      <h3 id="stat-temp">--</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col">
-                <div class="stat-card bg-light-primary">
-                  <div class="stat-card-body">
-                    <i class="bi bi-moisture stat-icon text-primary"></i>
-                    <div class="stat-card-info">
-                      <h5>Humidity</h5>
-                      <h3 id="stat-humidity">--</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col">
+              <div class="col-md-3 col-sm-6 mb-3">
                 <div class="stat-card bg-light-warning">
                   <div class="stat-card-body">
                     <i class="bi bi-cloud-fog stat-icon text-warning"></i>
@@ -188,10 +109,65 @@
                   </div>
                 </div>
               </div>
-              <div class="col">
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-purple">
+                  <div class="stat-card-body">
+                    <i class="bi bi-lungs stat-icon text-purple"></i>
+                    <div class="stat-card-info">
+                      <h5>AQI</h5>
+                      <h3 id="stat-aqi">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-info">
+                  <div class="stat-card-body">
+                    <i class="bi bi-wind stat-icon text-info"></i>
+                    <div class="stat-card-info">
+                      <h5>VOC</h5>
+                      <h3 id="stat-voc">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-danger">
+                  <div class="stat-card-body">
+                    <i class="bi bi-thermometer-half stat-icon text-danger"></i>
+                    <div class="stat-card-info">
+                      <h5>Temperature</h5>
+                      <h3 id="stat-temp">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-primary">
+                  <div class="stat-card-body">
+                    <i class="bi bi-droplet-half stat-icon text-primary"></i>
+                    <div class="stat-card-info">
+                      <h5>Humidity</h5>
+                      <h3 id="stat-humidity">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-success">
+                  <div class="stat-card-body">
+                    <i class="bi bi-dice-1 stat-icon text-success"></i>
+                    <div class="stat-card-info">
+                      <h5>PM1.0</h5>
+                      <h3 id="stat-pm1">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6 mb-3">
                 <div class="stat-card bg-light-warning">
                   <div class="stat-card-body">
-                    <i class="bi bi-cloud stat-icon text-warning"></i>
+                    <i class="bi bi-dice-2 stat-icon text-warning"></i>
                     <div class="stat-card-info">
                       <h5>PM2.5</h5>
                       <h3 id="stat-pm25">--</h3>
@@ -199,13 +175,46 @@
                   </div>
                 </div>
               </div>
-              <div class="col">
-                <div class="stat-card bg-light-purple">
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-danger">
                   <div class="stat-card-body">
-                    <i class="bi bi-wind stat-icon text-purple"></i>
+                    <i class="bi bi-dice-3 stat-icon text-danger"></i>
                     <div class="stat-card-info">
-                      <h5>AQI</h5>
-                      <h3 id="stat-aqi">--</h3>
+                      <h5>PM10</h5>
+                      <h3 id="stat-pm10">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-success">
+                  <div class="stat-card-body">
+                    <i class="bi bi-speedometer stat-icon text-success"></i>
+                    <div class="stat-card-info">
+                      <h5>Pressure</h5>
+                      <h3 id="stat-pressure">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-secondary">
+                  <div class="stat-card-body">
+                    <i class="bi bi-geo-alt stat-icon text-secondary"></i>
+                    <div class="stat-card-info">
+                      <h5>Elevation</h5>
+                      <h3 id="stat-elevation">--</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-light-info">
+                  <div class="stat-card-body">
+                    <i class="bi bi-battery-half stat-icon text-info"></i>
+                    <div class="stat-card-info">
+                      <h5>Battery</h5>
+                      <h3 id="stat-batt">--</h3>
                     </div>
                   </div>
                 </div>
