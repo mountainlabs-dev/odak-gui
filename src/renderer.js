@@ -89,6 +89,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
+    // Add export console button listener
+    const exportConsoleBtn = document.getElementById('export-console');
+    if (exportConsoleBtn) {
+      exportConsoleBtn.addEventListener('click', () => {
+        exportConsoleOutput();
+      });
+    }
+    
     cmdBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const cmd = btn.dataset.cmd;
@@ -316,10 +324,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Enhance CLI with colored output
+  // Enhance CLI with colored output and timestamps
   function addToCliOutput(text, className = 'cli-output') {
     const line = document.createElement('div');
     line.className = className;
+    
+    // Add timestamp prefix to each line
+    const timestamp = new Date().toTimeString().split(' ')[0] + '.' + String(new Date().getMilliseconds()).padStart(3, '0'); // Format as HH:MM:SS.mmm
     
     // Enhanced colored output based on content
     if (className === 'cli-output') {
@@ -336,7 +347,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    line.textContent = text;
+    // Add timestamp prefix except for command lines (which already have $ prefix)
+    if (className === 'cli-command') {
+      line.textContent = text;
+    } else {
+      line.textContent = `[${timestamp}] ${text}`;
+    }
+    
     cliOutput.appendChild(line);
     cliOutput.scrollTop = cliOutput.scrollHeight;
   }
@@ -1248,6 +1265,30 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCharts();
     
     addToCliOutput('Charts cleared', 'cli-command');
+  }
+  
+  // Exports the console output to a file
+  async function exportConsoleOutput() {
+    try {
+      // Get all content from the console output with formatting preserved
+      const consoleContent = Array.from(cliOutput.children)
+        .map(line => line.textContent)
+        .join('\n');
+      
+      // Add header with timestamp
+      const header = `ODAK Console Export - ${new Date().toLocaleString()}\n${'='.repeat(50)}\n\n`;
+      const fullContent = header + consoleContent;
+      
+      const result = await window.api.exportConsoleOutput(fullContent);
+      
+      if (result.success) {
+        addToCliOutput(`Console content exported to: ${result.filePath}`, 'cli-info');
+      } else if (!result.canceled) {
+        displayError({ message: 'Failed to export console content', details: result.error });
+      }
+    } catch (error) {
+      displayError({ message: 'Export error', details: error.message });
+    }
   }
   
   // Function to clear the CLI output

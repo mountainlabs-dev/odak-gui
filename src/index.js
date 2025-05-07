@@ -357,6 +357,32 @@ ipcMain.handle('update-firmware', async (event, options) => {
   }
 });
 
+// Add handler for exporting console output
+ipcMain.handle('export-console-output', async (event, content) => {
+  try {
+    const result = await dialog.showSaveDialog({
+      title: 'Export Console Output',
+      filters: [
+        { name: 'Text Files', extensions: ['txt'] },
+        { name: 'HTML Files', extensions: ['html'] }
+      ],
+      defaultPath: `ODAK_Console_${new Date().toISOString().replace(/:/g, '-').substring(0, 19)}.txt`,
+      properties: ['createDirectory']
+    });
+    
+    if (!result.canceled && result.filePath) {
+      // Write content to file
+      fs.writeFileSync(result.filePath, content);
+      return { success: true, filePath: result.filePath };
+    } else {
+      return { success: false, canceled: true };
+    }
+  } catch (error) {
+    console.error('Console export error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 function logData(data) {
   try {
     if (!logFilePath) return;

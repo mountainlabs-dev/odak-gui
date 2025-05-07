@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('api', {
   selectLogFile: () => ipcRenderer.invoke('select-log-file'),
   toggleLogging: (enabled) => ipcRenderer.invoke('toggle-logging', enabled),
   
+  // CLI export
+  exportConsoleOutput: (content) => ipcRenderer.invoke('export-console-output', content),
+  
   // Firmware update
   selectFirmwareFile: () => ipcRenderer.invoke('select-firmware-file'),
   updateFirmware: (options) => ipcRenderer.invoke('update-firmware', options),
