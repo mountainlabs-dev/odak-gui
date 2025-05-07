@@ -92,6 +92,14 @@
                   <td><span id="reading-pm10" class="readings-value">--</span> µg/m³</td>
                 </tr>
                 <tr>
+                  <th><i class="bi bi-speedometer text-success me-1"></i> Pressure</th>
+                  <td><span id="reading-pressure" class="readings-value">--</span> hPa</td>
+                </tr>
+                <tr>
+                  <th><i class="bi bi-geo-alt text-secondary me-1"></i> Elevation</th>
+                  <td><span id="reading-elevation" class="readings-value">--</span> m</td>
+                </tr>
+                <tr>
                   <th><i class="bi bi-lungs text-purple me-1"></i> AQI</th>
                   <td><span id="reading-aqi" class="readings-value">--</span></td>
                 </tr>
@@ -237,6 +245,16 @@
                   <div class="col-lg-6 mb-4">
                     <div class="chart-container">
                       <canvas id="aqiChart"></canvas>
+                    </div>
+                  </div>
+                  <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                      <canvas id="pressureChart"></canvas>
+                    </div>
+                  </div>
+                  <div class="col-lg-6 mb-4">
+                    <div class="chart-container">
+                      <canvas id="elevationChart"></canvas>
                     </div>
                   </div>
                   <div class="col-lg-6 mb-4">

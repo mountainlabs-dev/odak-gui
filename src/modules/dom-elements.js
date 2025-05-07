@@ -23,6 +23,24 @@ export const startDataBtn = document.getElementById('start-data-btn');
 export const stopDataBtn = document.getElementById('stop-data-btn');
 export const exportDataBtn = document.getElementById('export-data-btn');
 
+// Chart elements
+export const aqiChart = document.getElementById('aqiChart');
+export const pressureChart = document.getElementById('pressureChart');
+export const elevationChart = document.getElementById('elevationChart');
+export const batteryChart = document.getElementById('batteryChart');
+
+// Sensor reading elements
+export const readingTemp = document.getElementById('reading-temp');
+export const readingHum = document.getElementById('reading-hum');
+export const readingCo2 = document.getElementById('reading-co2');
+export const readingVoc = document.getElementById('reading-voc');
+export const readingPm1 = document.getElementById('reading-pm1');
+export const readingPm25 = document.getElementById('reading-pm25');
+export const readingPm10 = document.getElementById('reading-pm10');
+export const readingPressure = document.getElementById('reading-pressure');
+export const readingElevation = document.getElementById('reading-elevation');
+export const readingBatt = document.getElementById('reading-battery');
+
 // Firmware update elements
 export const selectFirmwareBtn = document.getElementById('select-firmware-btn');
 export const updateFirmwareBtn = document.getElementById('update-firmware-btn');

@@ -38,6 +38,14 @@ export default function initDataProcessing(elements, state) {
       elements.readingPm10.textContent = `${data.pm10.toFixed(1)} µg/m³`;
     }
     
+    if (data.pressure !== undefined && elements.readingPressure) {
+      elements.readingPressure.textContent = `${data.pressure.toFixed(1)} hPa`;
+    }
+    
+    if (data.elevation !== undefined && elements.readingElevation) {
+      elements.readingElevation.textContent = `${data.elevation.toFixed(1)} m`;
+    }
+    
     if (data.battery !== undefined && elements.readingBatt) {
       elements.readingBatt.textContent = `${data.battery.toFixed(1)}%`;
     }
@@ -63,6 +71,16 @@ export default function initDataProcessing(elements, state) {
     if (data.pm25 !== undefined) {
       state.pm25Data.push({ x: timestamp, y: data.pm25 });
       if (state.pm25Data.length > state.maxDataPoints) state.pm25Data.shift();
+    }
+    
+    if (data.pressure !== undefined) {
+      state.pressureData.push({ x: timestamp, y: data.pressure });
+      if (state.pressureData.length > state.maxDataPoints) state.pressureData.shift();
+    }
+    
+    if (data.elevation !== undefined) {
+      state.elevationData.push({ x: timestamp, y: data.elevation });
+      if (state.elevationData.length > state.maxDataPoints) state.elevationData.shift();
     }
   }
 

@@ -10,8 +10,10 @@ const chartData = {
   pm1: [],
   pm25: [],
   pm10: [],
-  battery: [],
-  aqi: []
+  aqi: [],
+  pressure: [],
+  elevation: [],
+  battery: []
 };
 
 // Import modules
@@ -51,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const readingPm1 = document.getElementById('reading-pm1');
   const readingPm25 = document.getElementById('reading-pm25');
   const readingPm10 = document.getElementById('reading-pm10');
+  const readingPressure = document.getElementById('reading-pressure');
+  const readingElevation = document.getElementById('reading-elevation');
   const readingBatt = document.getElementById('reading-batt');
   const readingAqi = document.getElementById('reading-aqi'); // Add reference to AQI reading element if it exists
   
@@ -383,75 +387,91 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function updateSensorReadings(data) {
+    console.log('Sensor Data:', data);
     // Update current readings display
     if (data.temperature !== undefined) {
       readingTemp.textContent = `${data.temperature.toFixed(1)}`;
       statTemp.textContent = `${data.temperature.toFixed(1)} °C`;
       addDataPoint('temperature', data.temperature);
+      console.log('Temperature:', data.temperature);
     }
     
     if (data.humidity !== undefined) {
       readingHum.textContent = `${data.humidity.toFixed(1)}`;
       statHumidity.textContent = `${data.humidity.toFixed(1)} %`;
       addDataPoint('humidity', data.humidity);
+      console.log('Humidity:', data.humidity);
     }
     
     if (data.co2 !== undefined) {
       readingCo2.textContent = `${data.co2.toFixed(0)}`;
       statCo2.textContent = `${data.co2.toFixed(0)} ppm`;
       addDataPoint('co2', data.co2);
+      console.log('CO2:', data.co2);
     }
     
     if (data.voc !== undefined) {
-      readingVoc.textContent = `${data.voc.toFixed(2)}`;
+      readingVoc.textContent = `${data.voc.toFixed(2)} ppm`;
       addDataPoint('voc', data.voc);
+      console.log('VOC:', data.voc);
     }
     
     // Handle PM1 format
     if (data.pm1 !== undefined) {
-      readingPm1.textContent = `${data.pm1.toFixed(1)}`;
+      readingPm1.textContent = `${data.pm1.toFixed(1)} µg/m³`;
       addDataPoint('pm1', data.pm1);
+      console.log('PM1:', data.pm1);
     }
     
-    // Handle both PM2.5 formats (pm25 or pm2.5)
+    // Handle PM2.5 format
     if (data['pm2.5'] !== undefined) {
       readingPm25.textContent = `${data['pm2.5'].toFixed(1)}`;
       statPm25.textContent = `${data['pm2.5'].toFixed(1)} µg/m³`;
       addDataPoint('pm25', data['pm2.5']);
-    } else if (data.pm25 !== undefined) {
-      readingPm25.textContent = `${data.pm25.toFixed(1)}`;
-      statPm25.textContent = `${data.pm25.toFixed(1)} µg/m³`;
-      addDataPoint('pm25', data.pm25);
+      console.log('PM2.5:', data['pm2.5']);
     }
     
-    // Add direct handling of AQI data from the device
-    if (data.aqi !== undefined) {
-      // Add AQI data point directly from the device data
-      addDataPoint('aqi', data.aqi);
-      
-      // Update AQI display elements if they exist
-      if (readingAqi) {
-        readingAqi.textContent = `${data.aqi}`;
-      }
-      
-      if (statAqi) {
-        statAqi.textContent = `${data.aqi}`;
-      }
-    }
-    
+    // Handle PM10 format
     if (data.pm10 !== undefined) {
-      readingPm10.textContent = `${data.pm10.toFixed(1)}`;
+      readingPm10.textContent = `${data.pm10.toFixed(1)} µg/m³`;
       addDataPoint('pm10', data.pm10);
+      console.log('PM10:', data.pm10);
     }
     
+    // Handle AQI if available
+    if (data.aqi !== undefined) {
+      readingAqi.textContent = `${data.aqi.toFixed(0)}`;
+      if (statAqi) statAqi.textContent = `${data.aqi.toFixed(0)}`;
+      addDataPoint('aqi', data.aqi);
+      console.log('AQI:', data.aqi);
+    }
+    
+    // Handle pressure if available
+    if (data.pressure !== undefined) {
+      readingPressure.textContent = `${data.pressure.toFixed(1)} hPa`;
+      addDataPoint('pressure', data.pressure);
+      console.log('Pressure:', data.pressure);
+    }
+    
+    // Handle elevation if available
+    if (data.elevation !== undefined) {
+      readingElevation.textContent = `${data.elevation.toFixed(1)} m`;
+      addDataPoint('elevation', data.elevation);
+      console.log('Elevation:', data.elevation);
+    }
+
+    // Handle battery if available
     if (data.battery !== undefined) {
-      readingBatt.textContent = `${data.battery.toFixed(0)}`;
+      readingBatt.textContent = `${data.battery.toFixed(2)} %`;
       addDataPoint('battery', data.battery);
+      console.log('Battery:', data.battery);
     }
+
+    console.log('Start update charts:', data);
     
-    // Update all charts with new data points
+    // Update all charts with the new data
     updateCharts();
-  }
+}
   
   // Data Logging Functions
   async function selectLogFile() {
@@ -995,6 +1015,116 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    
+    // Pressure Chart
+    const pressureCtx = document.getElementById('pressureChart');
+    charts.pressure = new Chart(pressureCtx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Pressure (hPa)',
+                    borderColor: 'rgb(145, 70, 255)',
+                    backgroundColor: 'rgba(145, 70, 255, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    tension: 0.2,
+                    data: []
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    text: 'Barometric Pressure'
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'minute',
+                        tooltipFormat: 'HH:mm:ss',
+                        displayFormats: {
+                            minute: 'HH:mm'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Pressure (hPa)'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Elevation Chart
+    const elevationCtx = document.getElementById('elevationChart');
+    charts.elevation = new Chart(elevationCtx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Elevation (m)',
+                    borderColor: 'rgb(40, 167, 69)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    tension: 0.2,
+                    data: []
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    text: 'Elevation'
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'minute',
+                        tooltipFormat: 'HH:mm:ss',
+                        displayFormats: {
+                            minute: 'HH:mm'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Elevation (m)'
+                    }
+                }
+            }
+        }
+    });
   }
   
   function addDataPoint(type, value) {
@@ -1064,10 +1194,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (chartData.aqi.length > 100) chartData.aqi.shift();
         break;
+      case 'pressure':
+        chartData.pressure.push({
+          x: timestamp,
+          y: value
+        });
+        if (chartData.pressure.length > 100) chartData.pressure.shift();
+        break;
+      case 'elevation':
+        chartData.elevation.push({
+          x: timestamp,
+          y: value
+        });
+        if (chartData.elevation.length > 100) chartData.elevation.shift();
+        break;
     }
   }
   
   function updateCharts() {
+    console.log('Updating charts with data:', chartData);
+
     // Temperature and Humidity
     charts.tempHum.data.datasets[0].data = chartData.temperature;
     charts.tempHum.data.datasets[1].data = chartData.humidity;
@@ -1094,6 +1240,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // AQI
     charts.aqi.data.datasets[0].data = chartData.aqi;
     charts.aqi.update();
+    
+    // Pressure
+    charts.pressure.data.datasets[0].data = chartData.pressure;
+    charts.pressure.update();
+    
+    // Elevation
+    charts.elevation.data.datasets[0].data = chartData.elevation;
+    charts.elevation.update();
   }
   
   function clearCharts() {
