@@ -314,12 +314,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Enhanced colored output based on content
     if (className === 'cli-output') {
-      if (text.includes('ERROR') || text.includes('failed') || text.includes('Failed')) {
+      if (text.includes('ERROR ')) {
         line.className = 'cli-error';
-      } else if (text.includes('WARNING') || text.includes('WARN')) {
+      } else if (text.includes('WARNING ') || text.includes('WARN ')) {
         line.className = 'cli-warning';
-      } else if (text.includes('INFO') || text.includes('success') || text.includes('Success')) {
+      } else if (text.includes('INFO ') || text.includes('success') || text.includes('Success')) {
         line.className = 'cli-info';
+      } else if (text.includes('TRACE ') || text.includes('DEBUG ')) {
+        line.className = 'cli-debug';
+      } else if (text.includes('FATAL ')) {
+        line.className = 'cli-fatal';
       }
     }
     

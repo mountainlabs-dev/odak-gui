@@ -111,6 +111,14 @@ header {
   color: #ffca28;
 }
 
+.cli-debug {
+  color: #ff9800;
+}
+
+.cli-fatal {
+  color: #d32f2f;
+}
+
 /* Status badges */
 .badge {
   font-weight: 500;
