@@ -9,7 +9,15 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        name: 'Odak',
+        authors: 'Odak Team',
+        description: 'Odak GUI for Odak devices',
+        setupIcon: './assets/icons/odak.ico',
+        noMsi: true,
+        setupExe: 'Odak-GUI-Setup.exe',
+        setupIcon: './assets/icons/odak.ico',
+      },
     },
     {
       name: '@electron-forge/maker-zip',
