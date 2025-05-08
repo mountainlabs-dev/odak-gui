@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('api', {
   connectToPort: (portConfig) => ipcRenderer.invoke('connect-port', portConfig),
   disconnectPort: () => ipcRenderer.invoke('disconnect-port'),
   sendCommand: (command) => ipcRenderer.invoke('send-command', command),
+  refreshPorts: () => ipcRenderer.invoke('refresh-ports'),
   
   // Data logging
   selectLogFile: () => ipcRenderer.invoke('select-log-file'),

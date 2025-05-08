@@ -111,12 +111,28 @@ async function listSerialPorts() {
 }
 
 // IPC Handlers for renderer process communication
+ipcMain.handle('refresh-ports', async () => {
+  try {
+    await listSerialPorts();
+    return { success: true };
+  } catch (error) {
+    console.error('Error refreshing ports:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('connect-port', async (event, portConfig) => {
   try {
     // Close any existing connection
     if (serialConnection && serialConnection.isOpen) {
       await new Promise(resolve => serialConnection.close(resolve));
+
+      // Add a small delay after closing to ensure port is fully released
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
+    
+    // Add a small delay before attempting to reopen
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     serialConnection = new SerialPort({
       path: portConfig.path,
@@ -127,6 +143,7 @@ ipcMain.handle('connect-port', async (event, portConfig) => {
       rtscts: false,
       xon: true,
       xoff: true,
+      autoOpen: true
     });
     
     parser = serialConnection.pipe(new ReadlineParser({ delimiter: '\r\n' }));
@@ -195,7 +212,14 @@ ipcMain.handle('send-command', async (event, command) => {
       });
     });
     
-    return { success: true };
+    // Check if this is a system reset command (case-insensitive)
+    const isSystemReset = command.toUpperCase().includes('SYS_RST');
+    
+    return { 
+      success: true, 
+      isSystemReset: isSystemReset,
+      devicePath: serialConnection.path // Return the current port for auto-reconnect
+    };
   } catch (error) {
     console.error('Command send error:', error);
     return { success: false, error: error.message };

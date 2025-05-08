@@ -317,6 +317,53 @@ document.addEventListener('DOMContentLoaded', () => {
         addToCliOutput(`Error: ${result.error}`, 'cli-error');
       }
       
+      // Check if this was a SYS_RST command based on result flag or command text (case-insensitive)
+      if ((result.isSystemReset || command.toUpperCase().includes('SYS_RST')) && selectedPort) {
+        addToCliOutput('System reset command sent. Device is resetting now. Will attempt to reconnect in 3 seconds...', 'cli-info');
+        
+        // Store the current port for reconnection
+        const portToReconnect = result.devicePath || selectedPort;
+        
+        // No need to explicitly disconnect as the reset command will do that
+        // The device itself resets immediately after receiving the command
+        
+        // Wait 5 seconds for the device to complete its reset cycle, then reconnect
+        setTimeout(async () => {
+          addToCliOutput('Attempting to reconnect...', 'cli-info');
+          
+          try {
+            // Refresh ports to ensure we have the latest list after device reset
+            await window.api.refreshPorts?.();
+            
+            // Small delay after port refresh
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Set the port select back to the original port
+            let portFound = false;
+            for (let i = 0; i < portSelect.options.length; i++) {
+              if (portSelect.options[i].value === portToReconnect) {
+                portSelect.selectedIndex = i;
+                portFound = true;
+                break;
+              }
+            }
+            
+            if (!portFound) {
+              addToCliOutput(`Warning: Port ${portToReconnect} not found in list. The device may have reconnected on a different port.`, 'cli-warning');
+            }
+            
+            // Wait for stability
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Reconnect to the port
+            await connectToPort();
+          } catch (reconnectError) {
+            addToCliOutput(`Reconnection error: ${reconnectError.message}`, 'cli-error');
+            addToCliOutput('You may need to reconnect manually.', 'cli-info');
+          }
+        }, 3000);
+      }
+      
       // Clear input
       cliInput.value = '';
     } catch (error) {
