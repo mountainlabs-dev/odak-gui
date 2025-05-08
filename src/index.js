@@ -87,8 +87,9 @@ function startPortRefresh() {
   // Initial port list
   listSerialPorts();
   
-  // Refresh every 3 seconds
-  portRefreshInterval = setInterval(listSerialPorts, 3000);
+  // Refresh less frequently (every 5 seconds) to reduce the chance 
+  // of interfering with user selections
+  portRefreshInterval = setInterval(listSerialPorts, 5000);
 }
 
 async function listSerialPorts() {

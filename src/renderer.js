@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     connectBtn.addEventListener('click', connectToPort);
     disconnectBtn.addEventListener('click', disconnectPort);
     refreshPortsBtn.addEventListener('click', refreshPorts);
+    portSelect.addEventListener('change', handlePortSelection);
     
     // CLI Interface
     cliSendBtn.addEventListener('click', sendCommand);
@@ -159,6 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
       currentPort: portsData.currentPort
     } : { isConnected: false, currentPort: null };
     
+    // Remember the currently selected port before updating the list
+    // Prefer the selectedPort variable (set by handlePortSelection) if available
+    const previouslySelectedPort = selectedPort || portSelect.value;
+    
     // Don't modify button states if we're already connected
     if (connectionInfo.isConnected && isConnected) {
       // Still update the port list, but preserve connection state
@@ -193,10 +198,20 @@ document.addEventListener('DOMContentLoaded', () => {
       portSelect.add(option);
       connectBtn.disabled = true;
     } else {
+      let userSelectedPreserved = false;
+      
       ports.forEach(port => {
         const option = document.createElement('option');
         option.value = port.path;
         option.text = `${port.path}`;
+        
+        // Preserve user's previous selection if it still exists in the list
+        if (previouslySelectedPort && port.path === previouslySelectedPort) {
+          option.selected = true;
+          userSelectedPreserved = true;
+          selectedPort = previouslySelectedPort; // Update the selectedPort variable
+        }
+        
         portSelect.add(option);
       });
       
@@ -210,6 +225,13 @@ document.addEventListener('DOMContentLoaded', () => {
     connectBtn.disabled = true;
     disconnectBtn.disabled = true;
     connectionStatus.innerHTML = '<span class="badge bg-secondary">Refreshing...</span>';
+  }
+  
+  // Track when user has explicitly selected a port
+  function handlePortSelection() {
+    if (portSelect.value) {
+      selectedPort = portSelect.value;
+    }
   }
   
   async function connectToPort() {
