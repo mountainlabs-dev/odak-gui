@@ -37,12 +37,6 @@ module.exports = {
       config: {
         icon: './assets/icons/odak.icns'
       }
-    },
-    {
-      name: '@electron-forge/maker-wix',
-      config: {
-        icon: './assets/icons/odak.ico'
-      }
     }
   ],
   plugins: [
