@@ -1,7 +1,7 @@
 {
   "name": "odak-gui",
   "productName": "ODAK Air Quality Monitor",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Desktop application for ODAK Air Quality Monitoring devices",
   "main": "src/index.js",
   "scripts": {
