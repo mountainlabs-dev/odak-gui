@@ -22,6 +22,19 @@ let portRefreshInterval;
 
 // Create the main window
 const createWindow = () => {
+  // Define platform-specific icon
+  let iconPath;
+  if (process.platform === 'darwin') {
+    // macOS uses .icns format
+    iconPath = path.join(__dirname, '../assets/icons', 'odak.icns');
+  } else if (process.platform === 'win32') {
+    // Windows uses .ico format
+    iconPath = path.join(__dirname, '../assets/icons', 'odak.ico');
+  } else {
+    // Linux and others can use .png
+    iconPath = path.join(__dirname, '../assets/icons', 'odak.png');
+  }
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -30,7 +43,7 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    icon: path.join(__dirname, '../assets/icons', 'odak.png')
+    icon: '../assets/icons/odak.png'
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));

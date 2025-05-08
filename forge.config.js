@@ -1,9 +1,12 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
+const path = require('path');
+
 module.exports = {
   packagerConfig: {
     asar: true,
+    icon: './assets/icons/odak', // Point to the base filename without extension
   },
   rebuildConfig: {},
   makers: [
@@ -20,17 +23,27 @@ module.exports = {
       },
     },
     {
-      name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
+      // Path to a single image that will act as icon for the application
       name: '@electron-forge/maker-deb',
-      config: {},
+      config: {
+        options: {
+          icon: '/./assets/icons/odak.png'
+        }
+      }
     },
     {
-      name: '@electron-forge/maker-rpm',
-      config: {},
+      // Path to the icon to use for the app in the DMG window
+      name: '@electron-forge/maker-dmg',
+      config: {
+        icon: './assets/icons/odak.icns'
+      }
     },
+    {
+      name: '@electron-forge/maker-wix',
+      config: {
+        icon: './assets/icons/odak.ico'
+      }
+    }
   ],
   plugins: [
     {
