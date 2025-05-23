@@ -285,110 +285,96 @@ ipcMain.handle('update-firmware', async (event, options) => {
       // Close connection to allow reset
       await new Promise(resolve => serialConnection.close(resolve));
     }
-    
-    // Use PowerShell directly via child_process
-    return new Promise((resolve, reject) => {
-      const psScript = `
-        # Use COM port if provided (for direct reset)
-        $comPort = "${comPort}"
+
+    if (process.platform === 'darwin') {
+      // macOS: Use flash.sh script from scripts folder
+      return new Promise((resolve, reject) => {
+        const flashScript = path.join(__dirname, '..', 'scripts', 'flash.sh');
         
-        if ($comPort) {
-          # Reset Pico over serial by changing baud rate
-          Write-Host "Resetting device on $comPort..."
-          mode $comPort baud=12 parity=n data=8 stop=1
-        } else {
-          Write-Host "No serial connection active. Please manually reset the device into bootloader mode."
-        }
+        // Make the script executable
+        fs.chmodSync(flashScript, '755');
         
-        # Wait for the device to enter BOOTSEL mode
-        Write-Host "Waiting for device to mount as a USB drive..."
-        $i = 0
-        $drive = $(Get-WmiObject Win32_LogicalDisk | Where-Object { $_.VolumeName -match "RPI" -or $_.VolumeName -match "BOOTLOADER" }).DeviceID.ToString()
-        while ($drive -eq $null) {
-            Write-Host "." -NoNewline
-            Start-Sleep -Milliseconds 500
-            $i += 1
-
-            # Exit if the device is not detected after 60 attempts (30 seconds)
-            if ($i -ge 60) {
-                throw "No bootloader device found after 30 seconds. Check connections and try again."
-            }
-            
-            $drive = $(Get-WmiObject Win32_LogicalDisk | Where-Object { $_.VolumeName -match "RPI" -or $_.VolumeName -match "BOOTLOADER" }).DeviceID.ToString()
-        }
-
-        # Check firmware file
-        $uf2File = "${options.firmwarePath}"
-        if (-not (Test-Path -Path $uf2File)) {
-            throw "Firmware file not found at: $uf2File"
-        }
-
-        # Copy firmware to the device
-        Write-Host "Copying firmware to device ($drive)..."
-        Copy-Item -Path $uf2File -Destination "$drive\\\"
-
-        # Give some time for the device to reboot
-        Start-Sleep -Seconds 3
-
-        # Check if flashing was successful
-        if (Test-Path -Path $drive) {
-            throw "Device was reset but flashing may have failed. The device is still in bootloader mode."
-        } else {
-            Write-Host "Flashing successful! The device has rebooted with the new firmware."
-        }
+        // Extract port number from full path (e.g., /dev/cu.usbmodem14201 -> 14201)
+        const portNumber = comPort ? comPort.split('.').pop() : '';
         
-        Write-Output "Firmware update completed successfully"
-      `;
-      
-      // Create a temporary file for the PowerShell script
-      const tmpFile = path.join(app.getPath('temp'), 'odak-firmware-update.ps1');
-      fs.writeFileSync(tmpFile, psScript);
-      
-      // Run PowerShell script
-      const ps = spawn('powershell', [
-        '-ExecutionPolicy', 'Bypass',
-        '-File', tmpFile
-      ]);
-      
-      let stdout = '';
-      let stderr = '';
-      
-      ps.stdout.on('data', (data) => {
-        const output = data.toString();
-        stdout += output;
+        // Copy firmware to build directory
+        const buildDir = path.join(__dirname, '..', 'build');
+        if (!fs.existsSync(buildDir)) {
+          fs.mkdirSync(buildDir, { recursive: true });
+        }
+        fs.copyFileSync(options.firmwarePath, path.join(buildDir, 'firmware.uf2'));
+
+        const bash = spawn('bash', [flashScript, portNumber]);
         
-        // Send progress updates to the renderer
-        mainWindow.webContents.send('firmware-progress', { message: output });
+        let stdout = '';
+        let stderr = '';
+        
+        bash.stdout.on('data', (data) => {
+          const output = data.toString();
+          stdout += output;
+          mainWindow.webContents.send('firmware-progress', { message: output });
+        });
+        
+        bash.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        bash.on('close', (code) => {
+          if (code === 0) {
+            resolve({ success: true, message: stdout });
+          } else {
+            reject(new Error(stderr || `Process exited with code ${code}`));
+          }
+        });
+        
+        bash.on('error', (err) => {
+          reject(err);
+        });
       });
-      
-      ps.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-      
-      ps.on('close', (code) => {
-        // Delete the temporary file
-        try {
-          fs.unlinkSync(tmpFile);
-        } catch (err) {
-          console.error('Failed to delete temporary file:', err);
-        }
+    } else {
+      // Windows: Use flash.ps1 script from scripts folder
+      return new Promise((resolve, reject) => {        // Get the path to the PowerShell script
+        const flashScript = path.join(__dirname, '..', 'scripts', 'flash.ps1');
+
+        // Make sure the firmware file exists
+        if (!fs.existsSync(options.firmwarePath)) {
+          throw new Error(`Firmware file not found at: ${options.firmwarePath}`);
+        }        // Run PowerShell script with parameters
+        const ps = spawn('powershell', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy', 'Bypass',
+          '-File', flashScript,
+          '-ComPort', comPort || '',
+          '-FirmwarePath', options.firmwarePath
+        ]);
         
-        if (code === 0) {
-          resolve({ success: true, message: stdout });
-        } else {
-          reject(new Error(stderr || `Process exited with code ${code}`));
-        }
+        let stdout = '';
+        let stderr = '';
+        
+        ps.stdout.on('data', (data) => {
+          const output = data.toString();
+          stdout += output;
+          mainWindow.webContents.send('firmware-progress', { message: output });
+        });
+        
+        ps.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        ps.on('close', (code) => {
+          if (code === 0) {
+            resolve({ success: true, message: stdout });
+          } else {
+            reject(new Error(stderr || `Process exited with code ${code}`));
+          }
+        });
+        
+        ps.on('error', (err) => {
+          reject(err);
+        });
       });
-      
-      ps.on('error', (err) => {
-        try {
-          fs.unlinkSync(tmpFile);
-        } catch (error) {
-          console.error('Failed to delete temporary file:', error);
-        }
-        reject(err);
-      });
-    });
+    }
   } catch (error) {
     console.error('Firmware update error:', error);
     return { success: false, error: error.message || 'Unknown error during firmware update' };
