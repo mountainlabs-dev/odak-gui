@@ -1,11 +1,20 @@
 #!/bin/bash
 # Bash script for resetting and flashing RP2040/Pico autonomously on macOS
 # Argument 1 is the serial port which Pico is connected to
+# Argument 2 is the firmware file path
+
+# Check if firmware file path is provided
+if [ -z "$2" ]; then
+    echo "Firmware file path not provided. Aborting process."
+    exit 1
+fi
+
+FIRMWARE_PATH="$2"
 
 # Wait for the serial device to mount
 echo "Waiting for Pico to mount..."
 count=0
-while [ ! -e /dev/$1 ]; do 
+while [ ! -e $1 ]; do 
     sleep 0.5
     count=$((count+1))
     echo "."
@@ -22,7 +31,7 @@ find /Volumes/ -type d -name 'RPI-RP*' -prune -exec rm -rf {} \;
 
 # Reset Pico by setting the baud rate to 1200 (for macOS, use `stty -f`)
 echo "Resetting Pico..."
-stty -f /dev/$1 1200
+stty -f $1 1200
 
 # Wait until Pico has mounted as a mass storage device
 count=0
@@ -42,7 +51,7 @@ sleep 5
 
 # Copy flash file to Pico
 echo "Copying flash file to Pico..."
-find ./build -type f -name '*.uf2' -exec cp -prv {} /Volumes/RPI-RP2 \;
+cp -prv "$FIRMWARE_PATH" /Volumes/RPI-RP2
 
 # Check if flash has been successful
 count=0

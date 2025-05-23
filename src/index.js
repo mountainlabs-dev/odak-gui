@@ -294,17 +294,11 @@ ipcMain.handle('update-firmware', async (event, options) => {
         // Make the script executable
         fs.chmodSync(flashScript, '755');
         
-        // Extract port number from full path (e.g., /dev/cu.usbmodem14201 -> 14201)
-        const portNumber = comPort ? comPort.split('.').pop() : '';
-        
-        // Copy firmware to build directory
-        const buildDir = path.join(__dirname, '..', 'build');
-        if (!fs.existsSync(buildDir)) {
-          fs.mkdirSync(buildDir, { recursive: true });
-        }
-        fs.copyFileSync(options.firmwarePath, path.join(buildDir, 'firmware.uf2'));
+        // Port number
+        const portNumber = comPort;
 
-        const bash = spawn('bash', [flashScript, portNumber]);
+        // Run the flash script with the port number and firmware path as arguments
+        const bash = spawn('bash', [flashScript, portNumber, options.firmwarePath]);
         
         let stdout = '';
         let stderr = '';
