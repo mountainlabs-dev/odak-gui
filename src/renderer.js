@@ -858,7 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pointHoverRadius: 5,
             tension: 0.2,
             data: [],
-            yAxisID: 'y1'
+            yAxisID: 'y'
           }
         ]
       },
@@ -894,10 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
               display: true,
               text: 'VOC (mg/m³)'
             },
-            position: 'right',
-            grid: {
-              drawOnChartArea: false
-            }
+            position: 'left'
           }
         }
       }
