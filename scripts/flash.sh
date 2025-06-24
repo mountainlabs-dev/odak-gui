@@ -14,16 +14,16 @@ FIRMWARE_PATH="$2"
 # Wait for the serial device to mount
 echo "Waiting for Pico to mount..."
 count=0
-while [ ! -e $1 ]; do 
-    sleep 0.5
-    count=$((count+1))
-    echo "."
-    # Exit script if no serial device could be found
-    if [ $count -ge 30 ]; then 
-        echo "No device found on serial port $1 - Aborting process."
-        exit 1
-    fi
-done
+# while [ ! -e $1 ]; do 
+#     sleep 0.5
+#     count=$((count+1))
+#     echo "."
+#     # Exit script if no serial device could be found
+#     if [ $count -ge 30 ]; then 
+#         echo "No device found on serial port $1 - Aborting process."
+#         exit 1
+#     fi
+# done
 
 # Delete old Pico mass storage relics from the file system
 echo "Deleting mass storage relics (if existing) in /Volumes/"
@@ -49,9 +49,57 @@ done
 # Give Pico some time to mount fully
 sleep 5
 
-# Copy flash file to Pico
+# Copy flash file to Pico with timeout
+CP_LOG="/tmp/cp_error_$$.log"
+COPY_TIMEOUT=20  # seconds
+
+copy_with_timeout() {
+    command="$1"
+    timeout="$2"
+    eval "( $command ) &"
+    pid=$!
+    SECONDS=0
+    while kill -0 $pid 2>/dev/null; do
+        if [ $SECONDS -ge $timeout ]; then
+            echo "Copy operation timed out after $timeout seconds. Killing process..."
+            kill -9 $pid 2>/dev/null
+            wait $pid 2>/dev/null
+            return 124
+        fi
+        sleep 1
+    done
+    wait $pid
+    return $?
+}
+
 echo "Copying flash file to Pico..."
-cp -prv "$FIRMWARE_PATH" /Volumes/RPI-RP2
+if ! copy_with_timeout "cp -prv \"$FIRMWARE_PATH\" /Volumes/RPI-RP2 2>$CP_LOG" $COPY_TIMEOUT; then
+    if grep -q "Operation not permitted" $CP_LOG; then
+        echo "\n================ PERMISSION ERROR ================"
+        echo "macOS Full Disk Access is required to update firmware."
+        echo "To grant access:"
+        echo "1. Open System Settings > Privacy & Security > Full Disk Access."
+        echo "2. Add and enable this app (or your Terminal if running from CLI)."
+        echo "3. Restart the app and try again."
+        echo "==================================================\n"
+        rm -f $CP_LOG
+        exit 11  # Use a unique exit code for permission error
+    fi
+    if grep -q "Copy operation timed out" $CP_LOG; then
+        echo "\n================ COPY TIMEOUT ================"
+        echo "Copying the firmware file timed out after $COPY_TIMEOUT seconds."
+        echo "Please check the Pico connection and try again."
+        echo "==============================================\n"
+        rm -f $CP_LOG
+        exit 12
+    fi
+    echo "Error: Could not copy firmware to /Volumes/RPI-RP2. Aborting."
+    cat $CP_LOG
+    rm -f $CP_LOG
+    exit 1
+else
+    rm -f $CP_LOG
+fi
 
 # Check if flash has been successful
 count=0

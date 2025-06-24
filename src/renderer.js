@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
       connectionStatus.innerHTML = '<span class="badge disconnected"><i class="bi bi-broadcast me-1"></i> Disconnected</span>';
       connectBtn.disabled = false;
       disconnectBtn.disabled = true;
-      updateFirmwareBtn.disabled = true;
+      // updateFirmwareBtn.disabled = true;
     }
   }
   
@@ -592,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (result.success) {
         selectedFirmwarePath = result.filePath;
         firmwareFileInput.value = selectedFirmwarePath;
-        updateFirmwareBtn.disabled = !isConnected;
+        updateFirmwareBtn.disabled = false;
       }
     } catch (error) {
       displayError({ message: 'File selection error', details: error.message });
