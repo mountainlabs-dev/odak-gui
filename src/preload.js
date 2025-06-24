@@ -57,3 +57,7 @@ contextBridge.exposeInMainWorld('api', {
     };
   },
 });
+
+contextBridge.exposeInMainWorld('odakPlatform', {
+  platform: process.platform
+});
