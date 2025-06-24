@@ -287,18 +287,28 @@ ipcMain.handle('update-firmware', async (event, options) => {
     }
 
     if (process.platform === 'darwin') {
-      // macOS: Use flash.sh script from scripts folder
+      // macOS: Use flash.sh script from scripts folder, extract to temp if in ASAR
       return new Promise((resolve, reject) => {
-        const flashScript = path.join(__dirname, '..', 'scripts', 'flash.sh');
-        
-        // Make the script executable
-        fs.chmodSync(flashScript, '755');
-        
+        const flashScriptAsar = path.join(__dirname, '..', 'scripts', 'flash.sh');
+        const os = require('os');
+        const crypto = require('crypto');
+        const tempDir = os.tmpdir();
+        const tempScriptName = `flash_${crypto.randomBytes(6).toString('hex')}.sh`;
+        const tempScriptPath = path.join(tempDir, tempScriptName);
+
+        // Copy the script out of ASAR to a temp location
+        try {
+          fs.copyFileSync(flashScriptAsar, tempScriptPath);
+          fs.chmodSync(tempScriptPath, '755');
+        } catch (copyErr) {
+          return reject(new Error(`Failed to extract flash.sh: ${copyErr.message}`));
+        }
+
         // Port number
         const portNumber = comPort;
 
         // Run the flash script with the port number and firmware path as arguments
-        const bash = spawn('bash', [flashScript, portNumber, options.firmwarePath]);
+        const bash = spawn('bash', [tempScriptPath, portNumber, options.firmwarePath]);
         
         let stdout = '';
         let stderr = '';
@@ -314,6 +324,8 @@ ipcMain.handle('update-firmware', async (event, options) => {
         });
         
         bash.on('close', (code) => {
+          // Clean up temp script
+          try { fs.unlinkSync(tempScriptPath); } catch (e) { /* ignore */ }
           if (code === 0) {
             resolve({ success: true, message: stdout });
           } else {
@@ -322,6 +334,8 @@ ipcMain.handle('update-firmware', async (event, options) => {
         });
         
         bash.on('error', (err) => {
+          // Clean up temp script
+          try { fs.unlinkSync(tempScriptPath); } catch (e) { /* ignore */ }
           reject(err);
         });
       });
