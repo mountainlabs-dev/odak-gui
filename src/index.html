@@ -499,6 +499,19 @@
                   </ol>
                 </div>
 
+                <div id="firmware-permission-warning" class="alert alert-warning d-flex align-items-center mb-3" style="display:none">
+                  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                  <div>
+                    <strong>macOS Full Disk Access Required (if not given):</strong><br>
+                    To update firmware, you must grant Full Disk Access to this app.<br>
+                    <ol class="mb-0 mt-1">
+                      <li>Open <b>System Settings &gt; Privacy &amp; Security &gt; Full Disk Access</b></li>
+                      <li>Add and enable this app </li>
+                      <li>Restart the app</li>
+                    </ol>
+                  </div>
+                </div>
+
                 <div class="mb-4">
                   <label for="firmware-file" class="form-label">Firmware File</label>
                   <div class="input-group">
@@ -532,5 +545,13 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="./renderer.js" type="module"></script>
+  <script>
+    // Only show the firmware permission warning on macOS (darwin)
+    if (navigator.userAgent.includes('Macintosh') || navigator.userAgent.includes('Mac OS X')) {
+      document.getElementById('firmware-permission-warning').style.display = '';
+    } else {
+      document.getElementById('firmware-permission-warning').style.display = 'none';
+    }
+  </script>
 </body>
 </html>

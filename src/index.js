@@ -328,8 +328,23 @@ ipcMain.handle('update-firmware', async (event, options) => {
           try { fs.unlinkSync(tempScriptPath); } catch (e) { /* ignore */ }
           if (code === 0) {
             resolve({ success: true, message: stdout });
+          } else if (code === 11) {
+            // Exit code 11: Full Disk Access permission error from flash.sh
+            // Extract and show the explanatory message from stdout
+            const fdaMsg = stdout.match(/=+ PERMISSION ERROR =+[\s\S]*?=+/);
+            resolve({
+              success: false,
+              error: fdaMsg ? fdaMsg[0] : 'macOS Full Disk Access is required.\n\nTo grant access:\n1. Open System Settings > Privacy & Security > Full Disk Access.\n2. Add and enable this app (or your Terminal if running from CLI).\n3. Restart the app and try again.'
+            });
+          } else if (code === 12) {
+            // Exit code 12: Copy timeout
+            const timeoutMsg = stdout.match(/=+ COPY TIMEOUT =+[\s\S]*?=+/);
+            resolve({
+              success: false,
+              error: timeoutMsg ? timeoutMsg[0] : 'Copying the firmware file timed out. Please check the Pico connection and try again.'
+            });
           } else {
-            reject(new Error(stderr || `Process exited with code ${code}`));
+            reject(new Error(stderr || stdout || `Process exited with code ${code}`));
           }
         });
         

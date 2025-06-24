@@ -25,9 +25,14 @@ count=0
 #     fi
 # done
 
-# Delete old Pico mass storage relics from the file system
-echo "Deleting mass storage relics (if existing) in /Volumes/"
-find /Volumes/ -type d -name 'RPI-RP*' -prune -exec rm -rf {} \;
+# Delete old Pico mass storage relics from the file system, but do NOT delete if currently mounted
+echo "Deleting Pico mass storage relics (if existing) in /Volumes/ (excluding currently mounted RPI-RP2)"
+for relic in /Volumes/RPI-RP*; do
+    if [ -d "$relic" ] && [ "$relic" != "/Volumes/RPI-RP2" ]; then
+        echo "Deleting relic: $relic"
+        rm -rf "$relic"
+    fi
+done
 
 # Reset Pico by setting the baud rate to 1200 (for macOS, use `stty -f`)
 echo "Resetting Pico..."
@@ -82,6 +87,7 @@ if ! copy_with_timeout "cp -prv \"$FIRMWARE_PATH\" /Volumes/RPI-RP2 2>$CP_LOG" $
         echo "2. Add and enable this app (or your Terminal if running from CLI)."
         echo "3. Restart the app and try again."
         echo "==================================================\n"
+        cat $CP_LOG
         rm -f $CP_LOG
         exit 11  # Use a unique exit code for permission error
     fi
@@ -90,6 +96,7 @@ if ! copy_with_timeout "cp -prv \"$FIRMWARE_PATH\" /Volumes/RPI-RP2 2>$CP_LOG" $
         echo "Copying the firmware file timed out after $COPY_TIMEOUT seconds."
         echo "Please check the Pico connection and try again."
         echo "==============================================\n"
+        cat $CP_LOG
         rm -f $CP_LOG
         exit 12
     fi
