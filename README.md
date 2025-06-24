@@ -1,6 +1,6 @@
 # ODAK Air Quality Monitor GUI
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 A desktop application built with Electron for interfacing with ODAK Air Quality Monitoring devices.
