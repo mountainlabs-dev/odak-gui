@@ -327,18 +327,33 @@ ipcMain.handle('update-firmware', async (event, options) => {
       });
     } else {
       // Windows: Use flash.ps1 script from scripts folder
-      return new Promise((resolve, reject) => {        // Get the path to the PowerShell script
-        const flashScript = path.join(__dirname, '..', 'scripts', 'flash.ps1');
+      return new Promise((resolve, reject) => {
+        // Get the path to the PowerShell script inside ASAR or unpacked
+        const flashScriptAsar = path.join(__dirname, '..', 'scripts', 'flash.ps1');
+        const os = require('os');
+        const crypto = require('crypto');
+        const tempDir = os.tmpdir();
+        const tempScriptName = `flash_${crypto.randomBytes(6).toString('hex')}.ps1`;
+        const tempScriptPath = path.join(tempDir, tempScriptName);
 
         // Make sure the firmware file exists
         if (!fs.existsSync(options.firmwarePath)) {
           throw new Error(`Firmware file not found at: ${options.firmwarePath}`);
-        }        // Run PowerShell script with parameters
+        }
+
+        // Copy the script out of ASAR to a temp location
+        try {
+          fs.copyFileSync(flashScriptAsar, tempScriptPath);
+        } catch (copyErr) {
+          return reject(new Error(`Failed to extract flash.ps1: ${copyErr.message}`));
+        }
+
+        // Run PowerShell script with parameters
         const ps = spawn('powershell', [
           '-NoProfile',
           '-NonInteractive',
           '-ExecutionPolicy', 'Bypass',
-          '-File', flashScript,
+          '-File', tempScriptPath,
           '-ComPort', comPort || '',
           '-FirmwarePath', options.firmwarePath
         ]);
@@ -357,6 +372,8 @@ ipcMain.handle('update-firmware', async (event, options) => {
         });
         
         ps.on('close', (code) => {
+          // Clean up temp script
+          try { fs.unlinkSync(tempScriptPath); } catch (e) { /* ignore */ }
           if (code === 0) {
             resolve({ success: true, message: stdout });
           } else {
@@ -365,6 +382,8 @@ ipcMain.handle('update-firmware', async (event, options) => {
         });
         
         ps.on('error', (err) => {
+          // Clean up temp script
+          try { fs.unlinkSync(tempScriptPath); } catch (e) { /* ignore */ }
           reject(err);
         });
       });
