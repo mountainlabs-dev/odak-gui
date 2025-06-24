@@ -1385,35 +1385,4 @@ document.addEventListener('DOMContentLoaded', () => {
       addToCliOutput(`Error: ${error.message}`, 'cli-error');
     }
   }
-  
-  // Firmware Permission (Full Disk Access) Warning Logic
-  const firmwarePermissionWarning = document.getElementById('firmware-permission-warning');
-
-  // Helper: Show the FDA warning if on macOS
-  function showFirmwarePermissionWarning() {
-    if (firmwarePermissionWarning && (navigator.userAgent.includes('Macintosh') || navigator.userAgent.includes('Mac OS X'))) {
-      firmwarePermissionWarning.style.display = '';
-    }
-  }
-
-  // Listen for IPC message from main process for FDA issues
-  if (window.api?.onFirmwarePermissionGuide) {
-    window.api.onFirmwarePermissionGuide(() => {
-      showFirmwarePermissionWarning();
-      // Optionally, scroll to the warning or highlight it
-      firmwarePermissionWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      firmwarePermissionWarning.classList.add('pulse');
-      setTimeout(() => firmwarePermissionWarning.classList.remove('pulse'), 2000);
-    });
-  }
-
-  // Always show the warning on macOS when firmware tab is shown
-  // (Assume firmware tab has id 'firmware-tab' and is shown via tab switching)
-  const firmwareTab = document.getElementById('firmware-tab');
-  if (firmwareTab) {
-    firmwareTab.addEventListener('show.bs.tab', showFirmwarePermissionWarning);
-  } else {
-    // Fallback: show on load if on macOS
-    showFirmwarePermissionWarning();
-  }
 });
