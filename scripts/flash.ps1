@@ -18,7 +18,7 @@ function Get-BootloaderDrive {
 
 <# reset pico over baud rate change to 1200 baud #>
 if ($ComPort) {
-    Write-Host "Resetting Pico on $ComPort"
+    Write-Host "Resetting Odak on $ComPort"
     mode $ComPort baud=12 parity=n data=8 stop=1
 } else {
     Write-Host "No COM port specified. Please manually put the device in bootloader mode."
@@ -37,7 +37,7 @@ if ($ComPort) {
     Start-Sleep -Seconds 2
 }
 
-Write-Host "Waiting for Pico to mount in bootloader mode..."
+Write-Host "Waiting for Odak to mount in bootloader mode..."
 $i = 0
 $drive = Get-BootloaderDrive
 while ($null -eq $drive) {
@@ -46,7 +46,7 @@ while ($null -eq $drive) {
     $i++
 
     if ($i -ge 60) {
-        Write-Host "`nNo Pico device found in bootloader mode after 30 seconds."
+        Write-Host "`nNo Odak device found in bootloader mode after 30 seconds."
         Write-Host "Please check:"
         Write-Host "1. The device is properly connected"
         Write-Host "2. No other application is using the device"
@@ -55,7 +55,7 @@ while ($null -eq $drive) {
     $drive = Get-BootloaderDrive
 }
 
-Write-Host "`nPico detected at drive $drive"
+Write-Host "`nOdak detected at drive $drive"
 
 # Check firmware file path (remove any extra quotes)
 $FirmwarePath = $FirmwarePath.Trim('"')

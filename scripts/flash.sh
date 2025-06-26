@@ -1,6 +1,6 @@
 #!/bin/bash
-# Bash script for resetting and flashing RP2040/Pico autonomously on macOS
-# Argument 1 is the serial port which Pico is connected to
+# Bash script for resetting and flashing Odak autonomously on macOS
+# Argument 1 is the serial port which Odak is connected to
 # Argument 2 is the firmware file path
 
 # Check if firmware file path is provided
@@ -12,7 +12,7 @@ fi
 FIRMWARE_PATH="$2"
 
 # Wait for the serial device to mount
-echo "Waiting for Pico to mount..."
+echo "Waiting for Odak to mount..."
 count=0
 # while [ ! -e $1 ]; do 
 #     sleep 0.5
@@ -25,8 +25,8 @@ count=0
 #     fi
 # done
 
-# Delete old Pico mass storage relics from the file system, but do NOT delete if currently mounted
-echo "Deleting Pico mass storage relics (if existing) in /Volumes/ (excluding currently mounted RPI-RP2)"
+# Delete old Odak mass storage relics from the file system, but do NOT delete if currently mounted
+echo "Deleting Odak mass storage relics (if existing) in /Volumes/ (excluding currently mounted RPI-RP2)"
 for relic in /Volumes/RPI-RP*; do
     if [ -d "$relic" ] && [ "$relic" != "/Volumes/RPI-RP2" ]; then
         echo "Deleting relic: $relic"
@@ -34,27 +34,27 @@ for relic in /Volumes/RPI-RP*; do
     fi
 done
 
-# Reset Pico by setting the baud rate to 1200 (for macOS, use `stty -f`)
-echo "Resetting Pico..."
+# Reset Odak by setting the baud rate to 1200 (for macOS, use `stty -f`)
+echo "Resetting Odak..."
 stty -f $1 1200
 
-# Wait until Pico has mounted as a mass storage device
+# Wait until Odak has mounted as a mass storage device
 count=0
 while [ ! -d /Volumes/RPI-RP2 ]; do 
     sleep 0.5
     echo "."
     count=$((count+1))
-    # Exit script if Pico did not mount as a mass storage device
+    # Exit script if Odak did not mount as a mass storage device
     if [ $count -ge 30 ]; then 
-        echo "Pico did not reboot - try again!"
+        echo "Odak did not reboot - try again!"
         exit 1
     fi
 done
 
-# Give Pico some time to mount fully
+# Give Odak some time to mount fully
 sleep 5
 
-# Copy flash file to Pico with timeout
+# Copy flash file to Odak with timeout
 CP_LOG="/tmp/cp_error_$$.log"
 COPY_TIMEOUT=20  # seconds
 
@@ -77,7 +77,7 @@ copy_with_timeout() {
     return $?
 }
 
-echo "Copying flash file to Pico..."
+echo "Copying flash file to Odak..."
 if ! copy_with_timeout "cp -prv \"$FIRMWARE_PATH\" /Volumes/RPI-RP2 2>$CP_LOG" $COPY_TIMEOUT; then
     if grep -q "Operation not permitted" $CP_LOG; then
         echo "\n================ PERMISSION ERROR ================"
@@ -94,7 +94,7 @@ if ! copy_with_timeout "cp -prv \"$FIRMWARE_PATH\" /Volumes/RPI-RP2 2>$CP_LOG" $
     if grep -q "Copy operation timed out" $CP_LOG; then
         echo "\n================ COPY TIMEOUT ================"
         echo "Copying the firmware file timed out after $COPY_TIMEOUT seconds."
-        echo "Please check the Pico connection and try again."
+        echo "Please check the Odak connection and try again."
         echo "==============================================\n"
         cat $CP_LOG
         rm -f $CP_LOG
@@ -114,9 +114,9 @@ while [ -d /Volumes/RPI-RP2 ]; do
     sleep 1
     echo "."
     count=$((count+1))
-    # Exit script if flash was not successful (Pico is still mounted as mass storage device)
+    # Exit script if flash was not successful (Odak is still mounted as mass storage device)
     if [ $count -ge 10 ]; then 
-        echo "Pico was reset but could not be flashed - please drag and drop .uf2-file manually!"
+        echo "Odak was reset but could not be flashed - please drag and drop .uf2-file manually!"
         exit 1
     fi
 done

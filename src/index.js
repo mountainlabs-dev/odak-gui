@@ -341,7 +341,7 @@ ipcMain.handle('update-firmware', async (event, options) => {
             const timeoutMsg = stdout.match(/=+ COPY TIMEOUT =+[\s\S]*?=+/);
             resolve({
               success: false,
-              error: timeoutMsg ? timeoutMsg[0] : 'Copying the firmware file timed out. Please check the Pico connection and try again.'
+              error: timeoutMsg ? timeoutMsg[0] : 'Copying the firmware file timed out. Please check the Odak connection and try again.'
             });
           } else {
             reject(new Error(stderr || stdout || `Process exited with code ${code}`));
