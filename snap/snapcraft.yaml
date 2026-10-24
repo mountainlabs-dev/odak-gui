@@ -7,7 +7,7 @@
 # (see .github/workflows/release.yml, which also sets `version` from package.json)
 name: odak-gui
 title: Odak Air Quality Monitor
-version: '0.5.0'
+version: '0.6.0'
 summary: Live readings, history and Air Coach results from your Odak
 description: |
   The desktop companion for the Odak Clean Air Assistant by Mountain Labs.
@@ -40,8 +40,7 @@ platforms:
 apps:
   odak-gui:
     # Chromium's setuid sandbox cannot run inside a snap; snap confinement takes its place
-    command: odak-gui/odak-gui --no-sandbox
-    desktop: meta/gui/odak-gui.desktop
+    command: app/odak-gui --no-sandbox
     extensions: [gnome]
     environment:
       TMPDIR: $XDG_RUNTIME_DIR
@@ -55,10 +54,14 @@ apps:
 
 parts:
   odak-gui:
-    plugin: dump
+    # The Forge build goes into app/ (it contains a file named odak-gui, so it can't be odak-gui/)
+    plugin: nil
     source: out/linux-unpacked
-    organize:
-      '*': odak-gui/
+    override-build: |
+      mkdir -p "$CRAFT_PART_INSTALL/app"
+      cp -a . "$CRAFT_PART_INSTALL/app/"
+      # The build folder is private to the build user; snaps must be readable by everyone
+      chmod -R u+rwX,go+rX "$CRAFT_PART_INSTALL/app"
     stage-packages:
       - libnss3
       - libnspr4
@@ -71,4 +74,10 @@ parts:
       - libnotify4
       - libuuid1
     prime:
-      - -odak-gui/chrome-sandbox
+      - -app/chrome-sandbox
+      # serialport prebuilds for other systems (this snap is glibc x86_64)
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/linux-x64/*.musl.node
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/linux-arm*
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/darwin*
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/win32*
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/android*

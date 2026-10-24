@@ -1,6 +1,6 @@
 # ODAK Air Quality Monitor GUI
 
-![Version](https://img.shields.io/badge/version-0.5.0-blue)
+![Version](https://img.shields.io/badge/version-0.6.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 A desktop application built with Electron for interfacing with ODAK Air Quality Monitoring devices.
@@ -67,7 +67,7 @@ npm run make -- --targets @electron-forge/maker-deb
 Install it:
 
 ```bash
-sudo apt install ./out/make/deb/x64/odak-gui_0.5.0_amd64.deb
+sudo apt install ./out/make/deb/x64/odak-gui_0.6.0_amd64.deb
 ```
 
 The package installs a udev rule (`/etc/udev/rules.d/60-odak.rules`) that gives the logged-in user access to the device and stops ModemManager from probing it. Unplug and replug the device after installing. When running from source instead (`npm start`), add your user to the `dialout` group and log in again:
