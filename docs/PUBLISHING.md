@@ -109,7 +109,7 @@ Forum post for step 2 (title: *Auto-connect request for odak-gui: raw-usb, remov
 > - **removable-media**: to copy a firmware file onto the device's RPI-RP2 bootloader drive
 >   (mounted under /media) during firmware updates.
 >
-> Source: https://github.com/mountainlabs-dev/odak_gui
+> Source: https://github.com/mountainlabs-dev/odak-gui
 
 ## Keep shipping the .deb
 

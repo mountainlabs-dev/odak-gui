@@ -32,8 +32,8 @@ A desktop application built with Electron for interfacing with ODAK Air Quality 
 
 1. Clone the repository
 ```bash
-git clone https://github.com/Mountain-Labs/ODAK_GUI.git
-cd ODAK_GUI/odak-gui
+git clone https://github.com/mountainlabs-dev/odak-gui.git
+cd odak-gui
 ```
 
 2. Install dependencies
@@ -188,6 +188,29 @@ odak-gui/
 - **Chart.js**: Data visualization library
 - **Bootstrap**: UI framework for responsive design
 - **Serialport**: Serial communication library
+
+## Repository layout
+
+| Folder | What it holds |
+|---|---|
+| `src/` | The desktop app (Electron): main process, window, Insights, firmware updates |
+| `web/` | The same app for Chrome and Edge, talking to Odak through Web Serial |
+| `firmware/` | `firmware.json`, the list of the newest Odak firmware per board that the app checks |
+| `snap/`, `packaging/` | Ubuntu snap, Microsoft Store and `.deb` packaging |
+| `docs/` | Publishing, firmware updates, store listing, privacy policy |
+
+Odak firmware files are published as `firmware-*` releases of this repository; see
+[docs/FIRMWARE_UPDATES.md](./docs/FIRMWARE_UPDATES.md). The firmware source code is not part of this repository.
+
+## Contributing
+
+Issues and pull requests are welcome at https://github.com/mountainlabs-dev/odak-gui.
+Every pull request is built for Linux and Windows by GitHub Actions. Please test changes with a
+real Odak when they touch the serial connection or firmware updates.
+
+## License
+
+MIT, see [LICENSE](./LICENSE). Odak and Mountain Labs are trademarks of Mountain Labs Teknoloji AŞ.
 
 ## Troubleshooting
 

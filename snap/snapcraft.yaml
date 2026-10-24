@@ -26,7 +26,8 @@ description: |
   and make sure your user is in the "dialout" group (sudo usermod -aG dialout $USER, then log in again).
 website: https://mountainlabs.io
 contact: https://mountainlabs.io
-source-code: https://github.com/mountainlabs-dev/odak_gui
+source-code: https://github.com/mountainlabs-dev/odak-gui
+issues: https://github.com/mountainlabs-dev/odak-gui/issues
 license: MIT
 icon: snap/gui/odak-gui.png
 

@@ -37,6 +37,8 @@ module.exports = {
       /^\/packaging(\/|$)/,
       /^\/snap(\/|$)/,
       /^\/docs(\/|$)/,
+      /^\/firmware(\/|$)/,
+      /^\/scripts\/publish-firmware\.sh$/,
       /^\/LICENSE$/,
       /^\/\.github(\/|$)/,
       /^\/out(\/|$)/,

@@ -1777,9 +1777,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return null;
     }
     if (fw.readState === 'ok') {
-      // The device reports major.minor only ("v2.9" for a 2.9.1 build): compare that much
-      const parts = fw.version.split('.').length;
-      const diff = compareVersions(entry.version.split('.').slice(0, parts).join('.'), fw.version);
+      // "v2.9" counts as 2.9.0, so the July 2.9 release is offered 2.9.5. Firmware must report its
+      // full version from 2.9.5 on, or a device that has it would be offered it again.
+      const diff = compareVersions(entry.version, fw.version);
       if (diff > 0) {
         setFirmwareState('bi-arrow-up-circle-fill', `Update available: v${fw.version} → v${entry.version}`, 'update');
         byId('fw-install-text').textContent = `Install v${entry.version}`;

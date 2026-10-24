@@ -16,7 +16,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_MANIFEST_URL = 'https://github.com/mountainlabs-dev/odak-firmware/releases/latest/download/firmware.json';
+// firmware/firmware.json on the main branch of the public odak-gui repository
+const DEFAULT_MANIFEST_URL = 'https://raw.githubusercontent.com/mountainlabs-dev/odak-gui/main/firmware/firmware.json';
 const manifestUrl = () => process.env.ODAK_FIRMWARE_MANIFEST || DEFAULT_MANIFEST_URL;
 const TIMEOUT_MS = 15000;
 
@@ -61,8 +62,7 @@ async function getManifest() {
       date: String(entry.date || ''),
     };
   }
-  if (Object.keys(boards).length === 0) throw new Error('The firmware list has no usable entries');
-  return boards;
+  return boards;  // may be empty until the first firmware is published
 }
 
 const sha256File = (file) => new Promise((resolve, reject) => {

@@ -72,7 +72,7 @@ Snap Store: Utilities, Science
 
 - Website / support: https://mountainlabs.io
 - Privacy policy: publish docs/PRIVACY.md at a public URL, e.g. https://mountainlabs.io/pages/odak-app-privacy
-- Source code: https://github.com/mountainlabs-dev/odak_gui (once public)
+- Source code: https://github.com/mountainlabs-dev/odak-gui
 
 ## Screenshots to take (1920×1080 or 1366×768, light theme)
 
