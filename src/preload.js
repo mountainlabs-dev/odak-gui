@@ -27,6 +27,12 @@ contextBridge.exposeInMainWorld('api', {
   // Firmware update
   selectFirmwareFile: () => ipcRenderer.invoke('select-firmware-file'),
   updateFirmware: (options) => ipcRenderer.invoke('update-firmware', options),
+  getFirmwareManifest: () => ipcRenderer.invoke('firmware-manifest'),
+  downloadFirmware: (board) => ipcRenderer.invoke('firmware-download', board),
+  onFirmwareDownloadProgress: (callback) => {
+    ipcRenderer.on('firmware-download-progress', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('firmware-download-progress');
+  },
   
   // Event listeners
   onPortsList: (callback) => {

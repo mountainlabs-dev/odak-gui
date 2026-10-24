@@ -106,6 +106,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const DEVICE_READY_TIMEOUT_MS = 90000;
   const AUTO_TIME_KEY = 'odak.autoSetTime';
   const PRIORITY_KEY = 'odak.priorities';
+  const BOARD_KEY = 'odak.board';
+  const fw = {
+    version: null,        // installed version read from the device, e.g. '2.9'
+    board: null,          // 'v1' / 'v2' from that version
+    readState: 'none',    // 'none' (not connected) | 'checking' | 'ok' | 'unknown' | 'no-reply'
+    boards: null,         // the firmware list: { v1: {...}, v2: {...} }
+    listError: null,
+    loading: false,
+    busy: false,
+    offered: new Set(),   // updates already offered this session ('v2-2.10')
+  };
   const MAX_CLI_LINES = 5000;
   
   // Setup event listeners
@@ -166,6 +177,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Firmware update
     selectFirmwareBtn.addEventListener('click', selectFirmwareFile);
     updateFirmwareBtn.addEventListener('click', updateFirmware);
+    byId('fw-install').addEventListener('click', installLatestFirmware);
+    byId('fw-check').addEventListener('click', loadFirmwareList);
+    byId('firmware-tab').addEventListener('shown.bs.tab', () => {
+      if (!fw.boards && !fw.loading) loadFirmwareList();
+    });
+    byId('fw-board-select').addEventListener('change', () => {
+      try { localStorage.setItem(BOARD_KEY, byId('fw-board-select').value); } catch (e) { /* ignore */ }
+      renderFirmware();
+    });
+    byId('fw-modal-update').addEventListener('click', () => {
+      bootstrap.Modal.getOrCreateInstance(byId('fw-modal')).hide();
+      bootstrap.Tab.getOrCreateInstance(byId('firmware-tab')).show();
+      installLatestFirmware();
+    });
+    try {
+      const savedBoard = localStorage.getItem(BOARD_KEY);
+      if (savedBoard) byId('fw-board-select').value = savedBoard;
+    } catch (e) { /* ignore */ }
     
     // Charts
     clearChartsBtn.addEventListener('click', clearCharts);
@@ -451,6 +480,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setScheduleStatus('');
     downloadHistoryBtn.disabled = !historyCache;
     insSyncBtn.disabled = true;
+    // Forget the board: another Odak may be plugged in next. The dropdown keeps the last one as a suggestion.
+    if (!firmwareUpdating) {
+      if (fw.board) byId('fw-board-select').value = fw.board;
+      fw.version = null;
+      fw.board = null;
+      fw.readState = 'none';
+      renderFirmware();
+    }
     byId('prio-save-btn').disabled = true;
     clockDevice.textContent = '';
   }
@@ -570,13 +607,20 @@ document.addEventListener('DOMContentLoaded', () => {
   
   async function runConnectTasks(seq) {
     infoFirmware.textContent = 'checking…';
+    setDeviceFirmware(null, 'checking');
     if (!(await waitForDeviceReady(seq))) {
-      if (seq === connectionSeq) infoFirmware.textContent = 'no reply';
+      if (seq === connectionSeq) {
+        infoFirmware.textContent = 'no reply';
+        setDeviceFirmware(null);
+        checkFirmwareAfterConnect(seq);
+      }
       return;
     }
     const version = await request('$PRINT_VERSION', (l) => /^v\d+\.\d+/.test(l) || l.includes('Unknown command: PRINT_VERSION'), 5000);
     if (seq !== connectionSeq) return;
     infoFirmware.textContent = version === null ? 'no reply' : version.startsWith('v') ? version : 'older firmware (no version command)';
+    setDeviceFirmware(version);
+    checkFirmwareAfterConnect(seq);
     
     if (autoTimeToggle.checked) await setDeviceTime({ seq, alreadyReady: true });
     else await refreshDeviceTime(seq);
@@ -1599,7 +1643,216 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Firmware Update Functions
+  // ─── Firmware updates ───────────────────────────────────────────────────────
+  // The app reads the firmware version ($PRINT_VERSION, "v2.9"): firmware 1.x runs on the original
+  // board (v1), 2.x on the new board (v2). It compares that with the firmware list, offers the
+  // update, downloads the right file for the board and flashes it. When the version can't be read,
+  // the user reads it on Odak's start-up screen and picks the board.
+  
+  function compareVersions(a, b) {
+    const pa = String(a).split('.').map(Number);
+    const pb = String(b).split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const d = (pa[i] || 0) - (pb[i] || 0);
+      if (d) return d;
+    }
+    return 0;
+  }
+  
+  function chosenBoard() {
+    const v = byId('fw-board-select').value;
+    return v || null;
+  }
+  
+  /** The board to update: read from the device, else the one the user picked. */
+  function targetBoard() {
+    return fw.board || chosenBoard();
+  }
+  
+  /** Called with the $PRINT_VERSION reply (null = not connected / gone). */
+  function setDeviceFirmware(reply, state) {
+    if (state) {
+      fw.readState = state;
+    } else if (reply && /^v\d+\.\d+/.test(reply)) {
+      fw.version = reply.slice(1).trim();
+      fw.board = `v${fw.version.split('.')[0]}`;
+      fw.readState = 'ok';
+      try { localStorage.setItem(BOARD_KEY, fw.board); } catch (e) { /* ignore */ }
+    } else {
+      fw.version = null;
+      fw.board = null;
+      fw.readState = reply === null ? 'no-reply' : 'unknown';
+    }
+    renderFirmware();
+  }
+  
+  async function loadFirmwareList() {
+    if (fw.loading) return;
+    fw.loading = true;
+    renderFirmware();
+    const result = await window.api.getFirmwareManifest();
+    fw.loading = false;
+    fw.boards = result.success ? result.boards : null;
+    fw.listError = result.success ? null : result.error;
+    renderFirmware();
+  }
+  
+  function setFirmwareState(icon, text, kind) {
+    const state = byId('fw-state');
+    state.className = `fw-cell fw-state ${kind || ''}`;
+    state.querySelector('i').className = `bi ${icon}`;
+    byId('fw-state-text').textContent = text;
+  }
+  
+  /** Redraw the Firmware tab from what we know. Returns the update on offer, if any. */
+  function renderFirmware() {
+    const board = targetBoard();
+    const entry = board && fw.boards ? fw.boards[board] : null;
+    const boardName = (b) => (b === 'v1' ? 'v1 · original board' : b === 'v2' ? 'v2 · new board' : b);
+  
+    // Your Odak
+    if (!isConnected && fw.readState === 'none') {
+      byId('fw-board').textContent = board ? boardName(board) : 'Not connected';
+      byId('fw-installed').textContent = 'Connect Odak to check its firmware';
+    } else if (fw.readState === 'checking') {
+      byId('fw-board').textContent = 'Checking…';
+      byId('fw-installed').textContent = 'Reading the firmware version';
+    } else if (fw.readState === 'ok') {
+      byId('fw-board').textContent = boardName(fw.board);
+      byId('fw-installed').textContent = `Firmware v${fw.version}`;
+    } else {
+      byId('fw-board').textContent = board ? boardName(board) : 'Unknown board';
+      byId('fw-installed').textContent = 'Version could not be read';
+    }
+  
+    // Latest firmware
+    byId('fw-latest').textContent = entry ? `v${entry.version}` : '—';
+    byId('fw-latest-date').textContent = entry && entry.date ? `Released ${entry.date}` : (board && fw.boards && !entry ? `None published for ${board}` : '');
+    const notes = byId('fw-notes');
+    notes.classList.toggle('d-none', !entry || !entry.notes);
+    notes.textContent = entry && entry.notes ? entry.notes : '';
+  
+    // Ask for the board when the device can't tell us
+    const needBoard = fw.readState === 'unknown' || fw.readState === 'no-reply' || (!isConnected && !fw.board);
+    byId('fw-unknown').classList.toggle('d-none', !needBoard);
+    byId('fw-unknown-why').textContent = fw.readState === 'unknown'
+      ? 'This Odak runs firmware that is too old to report its version.'
+      : fw.readState === 'no-reply'
+        ? 'Odak did not answer when asked for its version.'
+        : 'Odak is not connected. If it does not connect any more, you can still reinstall its firmware.';
+  
+    // State and the install button
+    const install = byId('fw-install');
+    const note = byId('fw-install-note');
+    let offer = null;
+    install.className = 'btn btn-primary';
+    if (fw.busy) {
+      install.disabled = true;
+      return null;
+    }
+    if (fw.listError) {
+      setFirmwareState('bi-wifi-off', `Could not get the firmware list: ${fw.listError}`, 'warn');
+      install.disabled = true;
+      byId('fw-install-text').textContent = 'Install update';
+      note.textContent = 'Check your internet connection and click "Check for updates".';
+      return null;
+    }
+    if (!fw.boards) {
+      setFirmwareState('bi-hourglass', fw.loading ? 'Checking for updates…' : 'Click "Check for updates"', '');
+      install.disabled = true;
+      note.textContent = '';
+      return null;
+    }
+    if (!board) {
+      setFirmwareState('bi-question-circle', isConnected ? 'Choose your board below' : 'Waiting for the device', '');
+      install.disabled = true;
+      byId('fw-install-text').textContent = 'Install update';
+      note.textContent = '';
+      return null;
+    }
+    if (!entry) {
+      setFirmwareState('bi-dash-circle', `No firmware published for board ${board} yet`, '');
+      install.disabled = true;
+      note.textContent = '';
+      return null;
+    }
+    if (fw.readState === 'ok') {
+      // The device reports major.minor only ("v2.9" for a 2.9.1 build): compare that much
+      const parts = fw.version.split('.').length;
+      const diff = compareVersions(entry.version.split('.').slice(0, parts).join('.'), fw.version);
+      if (diff > 0) {
+        setFirmwareState('bi-arrow-up-circle-fill', `Update available: v${fw.version} → v${entry.version}`, 'update');
+        byId('fw-install-text').textContent = `Install v${entry.version}`;
+        note.textContent = '';
+        offer = entry;
+      } else {
+        setFirmwareState('bi-check-circle-fill', `Up to date (v${fw.version})`, 'ok');
+        install.className = 'btn btn-outline-secondary';
+        byId('fw-install-text').textContent = `Reinstall v${entry.version}`;
+        note.textContent = 'Only needed if Odak misbehaves.';
+      }
+    } else {
+      setFirmwareState('bi-info-circle', `Ready to install v${entry.version} for board ${board}`, 'update');
+      byId('fw-install-text').textContent = `Install v${entry.version}`;
+      note.textContent = isConnected ? '' : 'Connect Odak first so the app can restart it into update mode. Only if it no longer connects: hold BOOTSEL while plugging it in.';
+    }
+    install.disabled = false;
+    return offer;
+  }
+  
+  /** After connecting: fetch the list and offer a newer firmware once per session. */
+  async function checkFirmwareAfterConnect(seq) {
+    if (!fw.boards) await loadFirmwareList();
+    if (seq !== connectionSeq || fw.busy) return;
+    const offer = renderFirmware();
+    const key = offer ? `${fw.board}-${offer.version}` : null;
+    if (!offer || fw.offered.has(key)) return;
+    fw.offered.add(key);
+    byId('fw-modal-text').textContent = `Odak firmware v${offer.version} is available for your ${fw.board === 'v1' ? 'original (v1)' : 'v2'} board. You have v${fw.version}. Update now?`;
+    byId('fw-modal-notes').textContent = offer.notes;
+    bootstrap.Modal.getOrCreateInstance(byId('fw-modal')).show();
+  }
+  
+  /** Download the latest firmware for the board and flash it. */
+  async function installLatestFirmware() {
+    const board = targetBoard();
+    const entry = board && fw.boards ? fw.boards[board] : null;
+    if (!entry || fw.busy) return;
+    fw.busy = true;
+    renderFirmware();
+    updateProgressContainer.classList.remove('d-none');
+    updateProgress.classList.add('progress-bar-animated');
+    updateProgress.classList.remove('bg-danger', 'bg-success');
+    updateProgress.style.width = '0%';
+    updateStatus.innerHTML = `<div class="alert alert-info">Downloading firmware v${entry.version}…</div>`;
+    const stop = window.api.onFirmwareDownloadProgress(({ received, total }) => {
+      if (total) updateProgress.style.width = `${Math.round((received / total) * 40)}%`;
+    });
+    let file = null;
+    try {
+      const result = await window.api.downloadFirmware(board);
+      if (!result.success) {
+        updateProgress.classList.remove('progress-bar-animated');
+        updateProgress.classList.add('bg-danger');
+        updateProgress.style.width = '100%';
+        updateStatus.innerHTML = '';
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger';
+        alert.textContent = `Download failed: ${result.error}`;
+        updateStatus.appendChild(alert);
+        return;
+      }
+      file = result.path;
+    } finally {
+      stop();
+      if (!file) { fw.busy = false; renderFirmware(); }
+    }
+    await flashFirmware(file, `v${entry.version}`);
+    fw.busy = false;
+    renderFirmware();
+  }
+  
+  // Advanced: a firmware file picked by hand
   async function selectFirmwareFile() {
     try {
       const result = await window.api.selectFirmwareFile();
@@ -1615,9 +1868,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   async function updateFirmware() {
-    if (!selectedFirmwarePath) return;
-    
-    // The flash script closes the port; reconnect to the device once it is back
+    if (!selectedFirmwarePath || fw.busy) return;
+    fw.busy = true;
+    renderFirmware();
+    await flashFirmware(selectedFirmwarePath, 'the selected file');
+    fw.busy = false;
+    renderFirmware();
+  }
+  
+  /** Put a .uf2 file on Odak; the device restarts and the app reconnects. */
+  async function flashFirmware(firmwarePath, label) {
+    // The flasher closes the port; reconnect to the device once it is back
     const wasConnected = isConnected;
     firmwareUpdating = true;
     stopReconnectWait();
@@ -1627,13 +1888,13 @@ document.addEventListener('DOMContentLoaded', () => {
       updateProgress.classList.add('progress-bar-animated');
       updateProgress.classList.remove('bg-danger', 'bg-success');
       updateProgressContainer.classList.remove('d-none');
-      updateProgress.style.width = '0%';
-      updateStatus.textContent = 'Preparing firmware update...';
+      updateProgress.style.width = '40%';
+      updateStatus.innerHTML = `<div class="alert alert-info">Installing ${label}…</div>`;
       
-      // Simulate progress to provide visual feedback
-      let progress = 0;
+      // Move the bar along while the device restarts and takes the file
+      let progress = 40;
       const progressInterval = setInterval(() => {
-        progress += 5;
+        progress += 3;
         if (progress > 95) {
           clearInterval(progressInterval);
         } else {
@@ -1641,9 +1902,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }, 500);
       
-      const result = await window.api.updateFirmware({
-        firmwarePath: selectedFirmwarePath
-      });
+      const result = await window.api.updateFirmware({ firmwarePath });
       
       clearInterval(progressInterval);
       
@@ -1652,13 +1911,17 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProgress.classList.remove('progress-bar-animated');
         updateProgress.classList.add('bg-success');
         updateStatus.innerHTML = wasConnected
-          ? '<div class="alert alert-success">Firmware update completed successfully. Reconnecting to the device automatically...</div>'
-          : '<div class="alert alert-success">Firmware update completed successfully.</div>';
+          ? `<div class="alert alert-success">Installed ${label}. Odak is restarting; the app reconnects by itself.</div>`
+          : `<div class="alert alert-success">Installed ${label}.</div>`;
       } else {
         updateProgress.style.width = '100%';
         updateProgress.classList.remove('progress-bar-animated');
         updateProgress.classList.add('bg-danger');
-        updateStatus.innerHTML = `<div class="alert alert-danger">Firmware update failed: ${result.error}</div>`;
+        updateStatus.innerHTML = '';
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger fw-error';
+        alert.textContent = `Firmware update failed: ${result.error}`;
+        updateStatus.appendChild(alert);
       }
     } catch (error) {
       updateProgress.style.width = '100%';
@@ -1667,7 +1930,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateStatus.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
       displayError({ message: 'Firmware update error', details: error.message });
     } finally {
-      updateFirmwareBtn.disabled = false;
+      updateFirmwareBtn.disabled = !selectedFirmwarePath;
       firmwareUpdating = false;
       if (wasConnected && !isConnected) startReconnectWait();
     }
@@ -2416,6 +2679,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Start-up that needs the Insights view: show the cached history and the schedule
   renderScheduleVisuals();
+  renderFirmware();
   window.api.loadHistoryCache().then((result) => {
     if (result.success && result.cache && Array.isArray(result.cache.rows)) historyCache = result.cache;
     else if (!result.success) addToCliOutput(`Could not load the history cache: ${result.error}`, 'cli-warning');

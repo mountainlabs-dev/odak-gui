@@ -13,7 +13,7 @@ A desktop application built with Electron for interfacing with ODAK Air Quality 
 - **Device Configuration**: Easy adjustment of device settings like language, measurement frequency, and display units
 - **Sensor Calibration**: Tools for calibrating all sensors with offset and multiplier values
 - **Data Logging**: Export sensor data to log files for record keeping and analysis
-- **Firmware Updates**: Simple interface for updating device firmware
+- **Firmware Updates**: Checks your Odak's firmware, offers the latest version for your board (v1 or v2) and installs it; see [docs/FIRMWARE_UPDATES.md](./docs/FIRMWARE_UPDATES.md)
 - **Device Clock**: Sets the device clock from this computer (manually or automatically on connect) and shows the device's own time
 - **My Plan**: Set when you wake, focus, rest and sleep (weekdays and weekend) and choose up to two priorities: allergy, infection, fatigue & migraine, or focus & productivity
 - **Insights**: Day, week, month and 6-month views of the measurements stored on the device, rated per part of your day exactly like the device's screens (a night belongs to the day you wake into)

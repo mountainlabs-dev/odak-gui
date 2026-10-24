@@ -1072,3 +1072,76 @@ header {
   outline: 2px solid #0057ff;
   outline-offset: 2px;
 }
+
+/* Firmware tab */
+.fw-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+.fw-cell {
+  background: #f4f6f9;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+}
+.fw-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6c757d;
+}
+.fw-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.fw-sub {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+.fw-state {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+}
+.fw-state i {
+  font-size: 1.5rem;
+  color: #6c757d;
+}
+.fw-state.ok { background: #e7f7ef; }
+.fw-state.ok i { color: #20a671; }
+.fw-state.update { background: #e8f0ff; }
+.fw-state.update i { color: #0057ff; }
+.fw-state.warn { background: #fff4e5; }
+.fw-state.warn i { color: #b45309; }
+.fw-notes {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-left: 3px solid #0057ff;
+  background: #f8faff;
+  border-radius: 0 8px 8px 0;
+  white-space: pre-line;
+  font-size: 0.9rem;
+}
+.fw-unknown {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #f2c94c;
+  background: #fffbea;
+  border-radius: 10px;
+}
+.fw-code {
+  font-family: 'JetBrains Mono', monospace;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 0 0.3rem;
+}
+.fw-error {
+  white-space: pre-line;
+}
+.fw-advanced summary {
+  cursor: pointer;
+  color: #6c757d;
+  font-size: 0.9rem;
+}

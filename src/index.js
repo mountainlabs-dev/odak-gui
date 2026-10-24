@@ -6,6 +6,7 @@ const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const { spawn } = require('child_process');
 const { flashLinux } = require('./linux-flash');
+const firmwareUpdates = require('./firmware-updates');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (require('electron-squirrel-startup')) {
@@ -362,6 +363,33 @@ ipcMain.handle('select-firmware-file', async () => {
     }
   } catch (error) {
     console.error('Firmware file selection error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Latest firmware per board, from the firmware list (see src/firmware-updates.js)
+ipcMain.handle('firmware-manifest', async () => {
+  try {
+    return { success: true, boards: await firmwareUpdates.getManifest() };
+  } catch (error) {
+    console.error('Firmware list error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Download (and verify) the latest firmware for a board; returns the file to flash
+ipcMain.handle('firmware-download', async (event, board) => {
+  try {
+    const boards = await firmwareUpdates.getManifest();
+    const entry = boards[board];
+    if (!entry) return { success: false, error: `No firmware is published for board ${board}.` };
+    const dir = path.join(app.getPath('userData'), 'firmware');
+    const file = await firmwareUpdates.downloadFirmware(entry, dir, (received, total) => {
+      mainWindow.webContents.send('firmware-download-progress', { received, total });
+    });
+    return { success: true, path: file, version: entry.version };
+  } catch (error) {
+    console.error('Firmware download error:', error);
     return { success: false, error: error.message };
   }
 });

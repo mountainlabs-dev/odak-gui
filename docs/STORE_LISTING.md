@@ -27,10 +27,13 @@ Connect your Odak with its USB cable to:
 - See what Odak's Air Coach suggested, what you did, how often the air improved, and how your
   exposure changed for the priorities you chose: allergy, infection, fatigue and migraine, or focus
   and productivity.
-- Set your daily plan and priorities, set the device clock, calibrate sensors, and update the firmware.
+- Keep Odak up to date: the app checks your Odak's firmware, tells you when an update is ready
+  for your board, and installs it for you.
+- Set your daily plan and priorities, set the device clock, and calibrate sensors.
 - Export your history as CSV or JSON, or as a backup you can import on another computer.
 
-Everything stays on your computer. The app does not collect or send any data.
+Everything stays on your computer. The app does not collect or send any data; it only goes online
+to check for and download firmware updates.
 
 Odak coaches you to lower your exposure to known indoor-air triggers. It does not diagnose or treat
 any condition.

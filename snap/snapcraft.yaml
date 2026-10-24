@@ -50,6 +50,7 @@ apps:
       - raw-usb           # the Odak's USB serial port (/dev/ttyACM*)
       - hardware-observe  # listing serial ports through udev
       - browser-support
+      - network           # checking for and downloading firmware updates
 
 parts:
   odak-gui:

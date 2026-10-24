@@ -20,8 +20,11 @@ The app talks to your Odak device over its USB cable. Everything it reads stays 
 - It does not send any data to Mountain Labs or anyone else.
 - It does not use analytics, crash reporting, advertising or tracking.
 - It does not create accounts or ask for personal details.
-- It makes no network connections. The only exceptions are links you click yourself
-  (for example *Help → Mountain Labs Website*), which open in your web browser.
+- It connects to the internet only to check for and download Odak firmware updates: it reads
+  the firmware list and, when you agree to an update, downloads the firmware file from
+  Mountain Labs' release page on GitHub. These requests carry no personal data or device data;
+  like any download, the server sees your IP address.
+- Links you click yourself (for example *Help → Mountain Labs Website*) open in your web browser.
 
 ## Health information
 
