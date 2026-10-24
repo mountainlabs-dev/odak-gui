@@ -1,24 +1,33 @@
 // Main process entry point for ODAK Air Quality Monitor GUI
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const { spawn } = require('child_process');
+const { flashLinux } = require('./linux-flash');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+// Linux (e.g. Pardus/Debian GNOME): Electron 36 can load GTK 4 alongside GTK 3
+// and abort with "GTK 2/3 symbols detected". Force GTK 3 to avoid the crash.
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('gtk-version', '3');
+}
+
 // Keep a global reference of objects
 let mainWindow;
+let aboutWindow = null;
 let serialConnection = null;
 let parser = null;
 let dataLogger = null;
 let loggingEnabled = false;
 let logFilePath = null;
 let portRefreshInterval;
+let inDataDump = false; // between DATA_BEGIN and DATA_END of a history download
 
 // Create the main window
 const createWindow = () => {
@@ -43,7 +52,7 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    icon: '../assets/icons/odak.png'
+    icon: iconPath
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
@@ -57,8 +66,78 @@ const createWindow = () => {
   startPortRefresh();
 };
 
+// Open links in the user's browser instead of inside the app (https only)
+function openLinksExternally(window) {
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://')) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  window.webContents.on('will-navigate', (event, url) => {
+    event.preventDefault();
+    if (url.startsWith('https://')) shell.openExternal(url);
+  });
+}
+
+function showAboutWindow() {
+  if (aboutWindow) {
+    aboutWindow.focus();
+    return;
+  }
+
+  aboutWindow = new BrowserWindow({
+    width: 560,
+    height: 680,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    parent: mainWindow,
+    modal: process.platform !== 'darwin',
+    title: 'About ODAK Air Quality Monitor',
+    icon: path.join(__dirname, '../assets/icons', 'odak.png'),
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  aboutWindow.removeMenu();
+  openLinksExternally(aboutWindow);
+  aboutWindow.loadFile(path.join(__dirname, 'about.html'), { query: { version: app.getVersion() } });
+  aboutWindow.on('closed', () => {
+    aboutWindow = null;
+  });
+}
+
+function createMenu() {
+  const isMac = process.platform === 'darwin';
+  const template = [
+    ...(isMac ? [{ role: 'appMenu' }] : []),
+    { role: 'fileMenu' },
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { role: 'windowMenu' },
+    {
+      role: 'help',
+      submenu: [
+        {
+          label: 'Mountain Labs Website',
+          click: () => shell.openExternal('https://mountainlabs.io'),
+        },
+        { type: 'separator' },
+        {
+          label: 'About ODAK Air Quality Monitor',
+          click: showAboutWindow,
+        },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 // Start application when ready
-app.on('ready', createWindow);
+app.on('ready', () => {
+  createMenu();
+  createWindow();
+});
 
 // Quit when all windows are closed
 app.on('window-all-closed', () => {
@@ -144,7 +223,7 @@ ipcMain.handle('connect-port', async (event, portConfig) => {
       rtscts: false,
       xon: true,
       xoff: true,
-      autoOpen: true
+      autoOpen: false
     });
     
     parser = serialConnection.pipe(new ReadlineParser({ delimiter: '\r\n' }));
@@ -154,13 +233,18 @@ ipcMain.handle('connect-port', async (event, portConfig) => {
       mainWindow.webContents.send('connection-status', { connected: true, port: portConfig.path });
     });
     
-    serialConnection.on('close', () => {
-      mainWindow.webContents.send('connection-status', { connected: false });
+    const connection = serialConnection;
+    connection.on('close', (err) => {
+      // Ignore closes of a connection that has already been replaced
+      if (connection !== serialConnection) return;
+      // err.disconnected is set when the device vanished (unplug, reset, firmware update)
+      mainWindow.webContents.send('connection-status', { connected: false, lost: !!(err && err.disconnected) });
     });
     
     serialConnection.on('error', (err) => {
       console.error('Serial port error:', err);
-      mainWindow.webContents.send('error', { message: 'Serial port error', details: err.message });
+      const details = isLinuxPermissionError(err) ? linuxSerialPermissionMessage(portConfig.path) : err.message;
+      mainWindow.webContents.send('error', { message: 'Serial port error', details });
     });
     
     parser.on('data', (data) => {
@@ -168,19 +252,27 @@ ipcMain.handle('connect-port', async (event, portConfig) => {
         // Process incoming data
         mainWindow.webContents.send('serial-data', data);
         
-        // Log data if enabled
-        if (loggingEnabled && logFilePath) {
+        // Log data if enabled (history downloads are saved separately, not into the live log)
+        if (data.startsWith('DATA_BEGIN,')) inDataDump = true;
+        if (loggingEnabled && logFilePath && !inDataDump) {
           logData(data);
         }
+        if (data.startsWith('DATA_END,')) inDataDump = false;
       } catch (error) {
         console.error('Error processing data:', error);
       }
     });
     
+    // Wait for the port to actually open so the renderer gets a real result
+    await new Promise((resolve, reject) => {
+      serialConnection.open((err) => (err ? reject(err) : resolve()));
+    });
+
     return { success: true };
   } catch (error) {
     console.error('Connection error:', error);
-    return { success: false, error: error.message };
+    const details = isLinuxPermissionError(error) ? linuxSerialPermissionMessage(portConfig.path) : error.message;
+    return { success: false, error: details };
   }
 });
 
@@ -286,10 +378,24 @@ ipcMain.handle('update-firmware', async (event, options) => {
       await new Promise(resolve => serialConnection.close(resolve));
     }
 
-    if (process.platform === 'darwin') {
-      // macOS: Use flash.sh script from scripts folder, extract to temp if in ASAR
+    if (process.platform === 'linux') {
+      // Linux: the app flashes the device itself (no scripts, so it also works inside a snap)
+      try {
+        await flashLinux({
+          portPath: comPort,
+          firmwarePath: options.firmwarePath,
+          progress: (message) => mainWindow.webContents.send('firmware-progress', { message }),
+        });
+        return { success: true };
+      } catch (error) {
+        const message = error.code === 'permission' ? linuxSerialPermissionMessage(comPort) : error.message;
+        return { success: false, error: message };
+      }
+    } else if (process.platform === 'darwin') {
+      // macOS: Use the flash.sh script from the scripts folder, extracted to temp if in ASAR
+      const scriptName = 'flash.sh';
       return new Promise((resolve, reject) => {
-        const flashScriptAsar = path.join(__dirname, '..', 'scripts', 'flash.sh');
+        const flashScriptAsar = path.join(__dirname, '..', 'scripts', scriptName);
         const os = require('os');
         const crypto = require('crypto');
         const tempDir = os.tmpdir();
@@ -301,14 +407,14 @@ ipcMain.handle('update-firmware', async (event, options) => {
           fs.copyFileSync(flashScriptAsar, tempScriptPath);
           fs.chmodSync(tempScriptPath, '755');
         } catch (copyErr) {
-          return reject(new Error(`Failed to extract flash.sh: ${copyErr.message}`));
+          return reject(new Error(`Failed to extract ${scriptName}: ${copyErr.message}`));
         }
 
         // Port number
         const portNumber = comPort;
 
         // Run the flash script with the port number and firmware path as arguments
-        const bash = spawn('bash', [tempScriptPath, portNumber, options.firmwarePath]);
+        const bash = spawn('bash', [tempScriptPath, portNumber || '', options.firmwarePath]);
         
         let stdout = '';
         let stderr = '';
@@ -338,7 +444,7 @@ ipcMain.handle('update-firmware', async (event, options) => {
             });
           } else if (code === 12) {
             // Exit code 12: Copy timeout
-            const timeoutMsg = stdout.match(/=+ COPY TIMEOUT =+[\s\S]*?=+/);
+            const timeoutMsg = stdout.match(/=+ COPY (TIMEOUT|FAILED) =+[\s\S]*?=+/);
             resolve({
               success: false,
               error: timeoutMsg ? timeoutMsg[0] : 'Copying the firmware file timed out. Please check the Odak connection and try again.'
@@ -423,6 +529,112 @@ ipcMain.handle('update-firmware', async (event, options) => {
   }
 });
 
+// Save the measurement history downloaded from the device as CSV or JSON
+// history = { columns: [...], records: [{ column: value, ... }] }
+ipcMain.handle('save-history', async (event, history) => {
+  try {
+    const result = await dialog.showSaveDialog({
+      title: 'Save Device History',
+      defaultPath: `ODAK_History_${new Date().toISOString().replace(/:/g, '-').substring(0, 19)}.csv`,
+      filters: [
+        { name: 'CSV Files', extensions: ['csv'] },
+        { name: 'JSON Files', extensions: ['json'] }
+      ],
+      properties: ['createDirectory']
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { success: false, canceled: true };
+    }
+
+    let content;
+    if (result.filePath.toLowerCase().endsWith('.json')) {
+      content = JSON.stringify(history.records, null, 2);
+    } else {
+      const csvValue = (value) => {
+        const text = value === null || value === undefined ? '' : String(value);
+        return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+      };
+      const lines = [history.columns.join(',')];
+      for (const record of history.records) {
+        lines.push(history.columns.map(column => csvValue(record[column])).join(','));
+      }
+      content = lines.join('\n') + '\n';
+    }
+
+    fs.writeFileSync(result.filePath, content);
+    return { success: true, filePath: result.filePath };
+  } catch (error) {
+    console.error('History save error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// History cache: everything downloaded from the device so far, so later syncs
+// only fetch new records ($DATA_DUMP,<from seq>) and older data survives the
+// device overwriting its oldest records. Stored as { columns, rows, syncedAt }.
+const historyCachePath = () => path.join(app.getPath('userData'), 'history-cache.json');
+
+ipcMain.handle('history-cache-load', async () => {
+  try {
+    if (!fs.existsSync(historyCachePath())) return { success: true, cache: null };
+    const cache = JSON.parse(await fs.promises.readFile(historyCachePath(), 'utf8'));
+    return { success: true, cache };
+  } catch (error) {
+    console.error('History cache load error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('history-cache-save', async (event, cache) => {
+  try {
+    // Write to a temp file first so a crash never leaves a half-written cache
+    const tempPath = `${historyCachePath()}.tmp`;
+    await fs.promises.writeFile(tempPath, JSON.stringify(cache));
+    await fs.promises.rename(tempPath, historyCachePath());
+    return { success: true };
+  } catch (error) {
+    console.error('History cache save error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Save a backup (measurements, Air Coach log and plan) people can import later or elsewhere
+ipcMain.handle('save-backup', async (event, backup) => {
+  try {
+    const result = await dialog.showSaveDialog({
+      title: 'Export Odak Backup',
+      defaultPath: `Odak_Backup_${new Date().toISOString().substring(0, 10)}.json`,
+      filters: [{ name: 'Odak Backup', extensions: ['json'] }],
+      properties: ['createDirectory']
+    });
+    if (result.canceled || !result.filePath) return { success: false, canceled: true };
+    await fs.promises.writeFile(result.filePath, JSON.stringify(backup));
+    return { success: true, filePath: result.filePath };
+  } catch (error) {
+    console.error('Backup save error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Open a history file saved earlier (CSV or JSON) to view it in Insights
+ipcMain.handle('open-history-file', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      title: 'Import Odak Backup or History',
+      filters: [{ name: 'Odak Backup or History', extensions: ['json', 'csv'] }],
+      properties: ['openFile']
+    });
+    if (result.canceled || result.filePaths.length === 0) return { success: false, canceled: true };
+    const filePath = result.filePaths[0];
+    const content = await fs.promises.readFile(filePath, 'utf8');
+    return { success: true, filePath, content };
+  } catch (error) {
+    console.error('History file open error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Add handler for exporting console output
 ipcMain.handle('export-console-output', async (event, content) => {
   try {
@@ -448,6 +660,21 @@ ipcMain.handle('export-console-output', async (event, content) => {
     return { success: false, error: error.message };
   }
 });
+
+// On Linux, serial ports belong to the 'dialout' group; users outside it get EACCES
+function isLinuxPermissionError(err) {
+  return process.platform === 'linux' && /permission denied|EACCES/i.test(err && err.message);
+}
+
+function linuxSerialPermissionMessage(port) {
+  // Inside the snap, USB access is an interface the user may have to connect first
+  const snapStep = process.env.SNAP
+    ? 'Allow Odak to use USB devices:\n    sudo snap connect odak-gui:raw-usb\n\nThen add'
+    : 'Add';
+  return `No permission to access ${port || 'the serial port'}.\n\n` +
+    `${snapStep} your user to the "dialout" group, then log out and back in:\n` +
+    '    sudo usermod -aG dialout $USER';
+}
 
 function logData(data) {
   try {

@@ -17,6 +17,13 @@ contextBridge.exposeInMainWorld('api', {
   // CLI export
   exportConsoleOutput: (content) => ipcRenderer.invoke('export-console-output', content),
   
+  // Device history (measurements stored in the device's flash)
+  saveHistory: (history) => ipcRenderer.invoke('save-history', history),
+  loadHistoryCache: () => ipcRenderer.invoke('history-cache-load'),
+  saveHistoryCache: (cache) => ipcRenderer.invoke('history-cache-save', cache),
+  openHistoryFile: () => ipcRenderer.invoke('open-history-file'),
+  saveBackup: (backup) => ipcRenderer.invoke('save-backup', backup),
+  
   // Firmware update
   selectFirmwareFile: () => ipcRenderer.invoke('select-firmware-file'),
   updateFirmware: (options) => ipcRenderer.invoke('update-firmware', options),
