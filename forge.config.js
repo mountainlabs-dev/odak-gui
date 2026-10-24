@@ -47,7 +47,11 @@ module.exports = {
       /^\/\.gitignore$/,
     ],
   },
-  rebuildConfig: {},
+  // serialport ships N-API binaries for every platform (prebuilds/), which work in Electron as they
+  // are; rebuilding from source needs a C++ toolchain and broke on newer Visual Studio versions.
+  rebuildConfig: {
+    ignoreModules: ['@serialport/bindings-cpp'],
+  },
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
@@ -120,6 +124,8 @@ module.exports = {
     // at package time, before code signing the application
     new FusesPlugin({
       version: FuseVersion.V1,
+      // Unsigned Mac builds: re-sign ad hoc after flipping fuses, or Apple Silicon reports the app as damaged
+      resetAdHocDarwinSignature: process.platform === 'darwin',
       [FuseV1Options.RunAsNode]: false,
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,

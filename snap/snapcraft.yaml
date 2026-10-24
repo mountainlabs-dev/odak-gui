@@ -7,7 +7,7 @@
 # (see .github/workflows/release.yml, which also sets `version` from package.json)
 name: odak-gui
 title: Odak Air Quality Monitor
-version: '0.5.0'
+version: '0.6.0'
 summary: Live readings, history and Air Coach results from your Odak
 description: |
   The desktop companion for the Odak Clean Air Assistant by Mountain Labs.
@@ -40,7 +40,7 @@ platforms:
 apps:
   odak-gui:
     # Chromium's setuid sandbox cannot run inside a snap; snap confinement takes its place
-    command: odak-gui/odak-gui --no-sandbox
+    command: app/odak-gui --no-sandbox
     desktop: meta/gui/odak-gui.desktop
     extensions: [gnome]
     environment:
@@ -55,10 +55,12 @@ apps:
 
 parts:
   odak-gui:
-    plugin: dump
+    # The Forge build goes into app/ (it contains a file named odak-gui, so it can't be odak-gui/)
+    plugin: nil
     source: out/linux-unpacked
-    organize:
-      '*': odak-gui/
+    override-build: |
+      mkdir -p "$CRAFT_PART_INSTALL/app"
+      cp -a . "$CRAFT_PART_INSTALL/app/"
     stage-packages:
       - libnss3
       - libnspr4
@@ -71,4 +73,4 @@ parts:
       - libnotify4
       - libuuid1
     prime:
-      - -odak-gui/chrome-sandbox
+      - -app/chrome-sandbox
