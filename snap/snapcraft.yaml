@@ -41,7 +41,6 @@ apps:
   odak-gui:
     # Chromium's setuid sandbox cannot run inside a snap; snap confinement takes its place
     command: app/odak-gui --no-sandbox
-    desktop: meta/gui/odak-gui.desktop
     extensions: [gnome]
     environment:
       TMPDIR: $XDG_RUNTIME_DIR
