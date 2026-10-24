@@ -90,3 +90,10 @@ typings/
 
 # Electron-Forge
 out/
+
+# Local archives and snapcraft build output
+*.zip
+*.snap
+parts/
+stage/
+prime/

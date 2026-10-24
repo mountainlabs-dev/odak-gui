@@ -1,0 +1,17 @@
+#!/bin/sh
+# Install udev rule for Odak (RP2040, USB vendor 2e8a):
+# - uaccess: the logged-in desktop user can open the serial port without joining 'dialout'
+# - ID_MM_DEVICE_IGNORE: stop ModemManager from probing the port with AT commands
+set -e
+
+cat > /etc/udev/rules.d/60-odak.rules <<'RULES'
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
+RULES
+
+if command -v udevadm >/dev/null 2>&1; then
+    udevadm control --reload-rules || true
+    udevadm trigger --subsystem-match=tty || true
+fi
+
+exit 0
