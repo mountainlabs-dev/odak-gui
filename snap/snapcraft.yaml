@@ -60,6 +60,8 @@ parts:
     override-build: |
       mkdir -p "$CRAFT_PART_INSTALL/app"
       cp -a . "$CRAFT_PART_INSTALL/app/"
+      # The build folder is private to the build user; snaps must be readable by everyone
+      chmod -R u+rwX,go+rX "$CRAFT_PART_INSTALL/app"
     stage-packages:
       - libnss3
       - libnspr4
@@ -73,3 +75,9 @@ parts:
       - libuuid1
     prime:
       - -app/chrome-sandbox
+      # serialport prebuilds for other systems (this snap is glibc x86_64)
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/linux-x64/*.musl.node
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/linux-arm*
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/darwin*
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/win32*
+      - -app/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/prebuilds/android*
