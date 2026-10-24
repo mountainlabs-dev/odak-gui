@@ -17,9 +17,22 @@ contextBridge.exposeInMainWorld('api', {
   // CLI export
   exportConsoleOutput: (content) => ipcRenderer.invoke('export-console-output', content),
   
+  // Device history (measurements stored in the device's flash)
+  saveHistory: (history) => ipcRenderer.invoke('save-history', history),
+  loadHistoryCache: () => ipcRenderer.invoke('history-cache-load'),
+  saveHistoryCache: (cache) => ipcRenderer.invoke('history-cache-save', cache),
+  openHistoryFile: () => ipcRenderer.invoke('open-history-file'),
+  saveBackup: (backup) => ipcRenderer.invoke('save-backup', backup),
+  
   // Firmware update
   selectFirmwareFile: () => ipcRenderer.invoke('select-firmware-file'),
   updateFirmware: (options) => ipcRenderer.invoke('update-firmware', options),
+  getFirmwareManifest: () => ipcRenderer.invoke('firmware-manifest'),
+  downloadFirmware: (board) => ipcRenderer.invoke('firmware-download', board),
+  onFirmwareDownloadProgress: (callback) => {
+    ipcRenderer.on('firmware-download-progress', (event, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('firmware-download-progress');
+  },
   
   // Event listeners
   onPortsList: (callback) => {

@@ -3,11 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/ https://fonts.googleapis.com/; font-src 'self' https://cdn.jsdelivr.net/ https://fonts.gstatic.com/; img-src 'self' data: https://cdn.jsdelivr.net/">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:">
   <title>ODAK Air Quality Monitor</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Everything the window needs ships with the app, so it works offline and contacts no other servers -->
+  <link href="../node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="../node_modules/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="../node_modules/@fontsource/inter/400.css" rel="stylesheet">
+  <link href="../node_modules/@fontsource/inter/500.css" rel="stylesheet">
+  <link href="../node_modules/@fontsource/inter/600.css" rel="stylesheet">
+  <link href="../node_modules/@fontsource/inter/700.css" rel="stylesheet">
+  <link href="../node_modules/@fontsource/jetbrains-mono/400.css" rel="stylesheet">
+  <link href="../node_modules/@fontsource/jetbrains-mono/500.css" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -52,6 +58,35 @@
               <button id="connect-btn" class="btn btn-primary"><i class="bi bi-plug-fill me-1"></i> Connect</button>
               <button id="disconnect-btn" class="btn btn-outline-danger" disabled><i class="bi bi-power me-1"></i> Disconnect</button>
             </div>
+            <table class="table table-sm small mb-0 readings-table">
+              <tbody>
+                <tr><th>Firmware</th><td id="info-firmware">--</td></tr>
+                <tr><th>Battery</th><td id="info-battery-v">--</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Device Clock Card -->
+        <div class="card">
+          <div class="card-header card-header-colored card-header-primary">
+            <i class="bi bi-clock me-1"></i> Device Clock
+          </div>
+          <div class="card-body">
+            <div class="small text-muted">This computer's time</div>
+            <div id="clock-now" class="fs-5 fw-semibold readings-value d-inline-block mb-1">--</div>
+            <div id="clock-tz" class="small text-muted mb-3">--</div>
+            <div class="d-grid mb-2">
+              <button id="set-time-btn" class="btn btn-outline-primary" disabled>
+                <i class="bi bi-clock-history me-1"></i> Set Device Time
+              </button>
+            </div>
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="auto-time-toggle" checked>
+              <label class="form-check-label small fw-medium" for="auto-time-toggle">Set time automatically on connect</label>
+            </div>
+            <div id="clock-device" class="small mb-1"></div>
+            <div id="clock-status" class="small text-muted"></div>
           </div>
         </div>
 
@@ -69,6 +104,28 @@
               <button id="select-log-file" class="btn btn-outline-primary"><i class="bi bi-folder2-open me-1"></i> Select Log File</button>
             </div>
             <div id="log-file-path" class="text-muted mt-2 small text-truncate"></div>
+            <div id="log-count" class="text-muted small"></div>
+          </div>
+        </div>
+
+        <!-- Device History Card (measurements stored in the device's flash) -->
+        <div class="card">
+          <div class="card-header card-header-colored card-header-primary">
+            <i class="bi bi-clock-history me-1"></i> Device History
+          </div>
+          <div class="card-body">
+            <p class="text-muted small mb-3">
+              The device stores every measurement in its memory. Download them as CSV or JSON.
+            </p>
+            <div class="d-grid">
+              <button id="download-history-btn" class="btn btn-outline-primary" disabled>
+                <i class="bi bi-download me-1"></i> Download History
+              </button>
+            </div>
+            <div class="progress mt-2 d-none" id="history-progress-container" style="height: 6px;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" id="history-progress" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div id="history-status" class="small text-muted mt-2"></div>
           </div>
         </div>
       </div>
@@ -79,6 +136,16 @@
           <li class="nav-item" role="presentation">
             <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab">
               <i class="bi bi-speedometer2 me-1"></i> Dashboard
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab">
+              <i class="bi bi-bar-chart-line me-1"></i> Insights
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule" type="button" role="tab">
+              <i class="bi bi-calendar-week me-1"></i> My Plan
             </button>
           </li>
           <li class="nav-item" role="presentation">
@@ -277,6 +344,178 @@
           </div>
 
           <!-- CLI Interface Tab -->
+          <!-- Insights Tab: history stored on the device, by day / week / month -->
+          <div class="tab-pane fade" id="insights" role="tabpanel">
+            <div id="ins-drop" class="ins-drop d-none"><i class="bi bi-box-arrow-in-down"></i> Drop to import</div>
+            <div class="card">
+              <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                <span><i class="bi bi-bar-chart-line me-1"></i> Air Quality Insights</span>
+                <span id="ins-data-info" class="small text-muted fw-normal ms-2"></span>
+                <div class="ms-auto d-flex gap-2">
+                  <button id="ins-open-btn" class="btn btn-sm btn-outline-secondary" title="Import an Odak backup or a saved CSV / JSON history (or drop the file here)">
+                    <i class="bi bi-box-arrow-in-down me-1"></i> Import
+                  </button>
+                  <button id="ins-export-btn" class="btn btn-sm btn-outline-secondary" title="Save a backup with all measurements, Air Coach history and your plan" disabled>
+                    <i class="bi bi-box-arrow-up me-1"></i> Export backup
+                  </button>
+                  <button id="ins-sync-btn" class="btn btn-sm btn-primary" disabled>
+                    <i class="bi bi-arrow-repeat me-1"></i> Sync from device
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="progress mb-2 d-none" id="ins-progress-container" style="height: 4px;">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated" id="ins-progress" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div id="ins-status" class="small text-muted mb-2"></div>
+
+                <div class="insights-toolbar">
+                  <div class="btn-group" role="group" aria-label="Period">
+                    <button class="btn btn-sm btn-outline-primary active" data-view="day">Day</button>
+                    <button class="btn btn-sm btn-outline-primary" data-view="week">Week</button>
+                    <button class="btn btn-sm btn-outline-primary" data-view="month">Month</button>
+                    <button class="btn btn-sm btn-outline-primary" data-view="sixmonths">6 Months</button>
+                  </div>
+                  <div class="d-flex align-items-center gap-1">
+                    <button id="ins-prev" class="btn btn-sm btn-light border" title="Previous"><i class="bi bi-chevron-left"></i></button>
+                    <input type="date" id="ins-date" class="form-control form-control-sm" style="width: 9.5rem;">
+                    <button id="ins-next" class="btn btn-sm btn-light border" title="Next"><i class="bi bi-chevron-right"></i></button>
+                    <button id="ins-today" class="btn btn-sm btn-light border">Today</button>
+                  </div>
+                  <select id="ins-metric" class="form-select form-select-sm" style="width: auto;">
+                    <option value="co2">CO₂</option>
+                    <option value="pm25">PM2.5</option>
+                    <option value="voc">VOC index</option>
+                    <option value="temp">Temperature</option>
+                    <option value="hum">Humidity</option>
+                  </select>
+                </div>
+
+                <h5 id="ins-title" class="fw-semibold mt-3 mb-2"></h5>
+                <div id="ins-summary" class="insights-summary"></div>
+                <div id="ins-content" class="mt-3"></div>
+                <div id="ins-chart-wrap" class="chart-container mt-3">
+                  <canvas id="ins-chart"></canvas>
+                </div>
+                <div id="ins-coach" class="mt-4"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- My Plan Tab: priorities, weekday and weekend day plans -->
+          <div class="tab-pane fade" id="schedule" role="tabpanel">
+            <div class="card">
+              <div class="card-header"><i class="bi bi-heart-pulse me-1"></i> What matters to you</div>
+              <div class="card-body">
+                <p class="text-muted small mb-3">
+                  Choose up to two. Odak's Air Coach watches the triggers behind them more closely and suggests actions on its screen.
+                  Insights shows how your air changed for each of them.
+                </p>
+                <div class="priority-picker">
+                  <label class="priority-option"><input type="checkbox" class="priority-check" value="0">
+                    <span><i class="bi bi-flower1"></i><b>Allergy</b><small>Fine dust, pollen-size particles, damp air, irritants</small></span></label>
+                  <label class="priority-option"><input type="checkbox" class="priority-check" value="1">
+                    <span><i class="bi bi-shield-plus"></i><b>Infection</b><small>Stale air already breathed by others, very dry air</small></span></label>
+                  <label class="priority-option"><input type="checkbox" class="priority-check" value="2">
+                    <span><i class="bi bi-lightning-charge"></i><b>Fatigue &amp; migraine</b><small>High CO₂, irritants, heat, dry air</small></span></label>
+                  <label class="priority-option"><input type="checkbox" class="priority-check" value="3">
+                    <span><i class="bi bi-bullseye"></i><b>Focus &amp; productivity</b><small>Fresh air and a comfortable room while you work</small></span></label>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3 align-items-center">
+                  <button id="prio-save-btn" class="btn btn-primary" disabled><i class="bi bi-upload me-1"></i> Save to device</button>
+                  <span id="prio-status" class="small text-muted"></span>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><i class="bi bi-calendar-week me-1"></i> Your day</div>
+              <div class="card-body">
+                <p class="text-muted small mb-3">
+                  Tell Odak when you wake up, focus, rest and sleep. Each part starts at its time and lasts until the next one,
+                  so sleep can run past midnight. Odak rates the air for each part of your day on its <b>My day</b> screens,
+                  and the <b>Insights</b> tab uses the same schedule.
+                </p>
+                <div class="row g-3">
+                  <div class="col-xl-6">
+                    <div class="schedule-profile" data-profile="weekday">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-semibold mb-0"><i class="bi bi-briefcase me-1"></i> Weekdays <span class="text-muted fw-normal small">Mon – Fri</span></h6>
+                      </div>
+                      <div class="schedule-row">
+                        <label for="sched-weekday-0" class="fw-medium"><span class="phase-dot" style="background:#f2b632"></span><i class="bi bi-sunrise me-1"></i>Wake</label>
+                        <span class="sched-duration small text-muted" id="sched-dur-weekday-0"></span>
+                        <input type="time" class="form-control form-control-sm" id="sched-weekday-0" value="07:00">
+                      </div>
+                      <div class="schedule-row">
+                        <label for="sched-weekday-1" class="fw-medium"><span class="phase-dot" style="background:#3a8dff"></span><i class="bi bi-laptop me-1"></i>Focus</label>
+                        <span class="sched-duration small text-muted" id="sched-dur-weekday-1"></span>
+                        <input type="time" class="form-control form-control-sm" id="sched-weekday-1" value="09:00">
+                      </div>
+                      <div class="schedule-row">
+                        <label for="sched-weekday-2" class="fw-medium"><span class="phase-dot" style="background:#20a671"></span><i class="bi bi-cup-hot me-1"></i>Rest</label>
+                        <span class="sched-duration small text-muted" id="sched-dur-weekday-2"></span>
+                        <input type="time" class="form-control form-control-sm" id="sched-weekday-2" value="18:00">
+                      </div>
+                      <div class="schedule-row">
+                        <label for="sched-weekday-3" class="fw-medium"><span class="phase-dot" style="background:#6f42c1"></span><i class="bi bi-moon-stars me-1"></i>Sleep</label>
+                        <span class="sched-duration small text-muted" id="sched-dur-weekday-3"></span>
+                        <input type="time" class="form-control form-control-sm" id="sched-weekday-3" value="23:00">
+                      </div>
+                      <div class="sched-bar mt-2" id="sched-bar-weekday"></div>
+                    </div>
+                  </div>
+                  <div class="col-xl-6">
+                    <div class="schedule-profile" data-profile="weekend">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-semibold mb-0"><i class="bi bi-tree me-1"></i> Weekend <span class="text-muted fw-normal small">Sat – Sun</span></h6>
+                        <button id="sched-copy-btn" class="btn btn-sm btn-link p-0" title="Use the weekday times for the weekend">
+                          <i class="bi bi-files me-1"></i>Same as weekdays
+                        </button>
+                      </div>
+                      <div class="schedule-row">
+                        <label for="sched-weekend-0" class="fw-medium"><span class="phase-dot" style="background:#f2b632"></span><i class="bi bi-sunrise me-1"></i>Wake</label>
+                        <span class="sched-duration small text-muted" id="sched-dur-weekend-0"></span>
+                        <input type="time" class="form-control form-control-sm" id="sched-weekend-0" value="09:00">
+                      </div>
+                      <div class="schedule-row">
+                        <label for="sched-weekend-1" class="fw-medium"><span class="phase-dot" style="background:#3a8dff"></span><i class="bi bi-laptop me-1"></i>Focus</label>
+                        <span class="sched-duration small text-muted" id="sched-dur-weekend-1"></span>
+                        <input type="time" class="form-control form-control-sm" id="sched-weekend-1" value="11:00">
+                      </div>
+                      <div class="schedule-row">
+                        <label for="sched-weekend-2" class="fw-medium"><span class="phase-dot" style="background:#20a671"></span><i class="bi bi-cup-hot me-1"></i>Rest</label>
+                        <span class="sched-duration small text-muted" id="sched-dur-weekend-2"></span>
+                        <input type="time" class="form-control form-control-sm" id="sched-weekend-2" value="19:00">
+                      </div>
+                      <div class="schedule-row">
+                        <label for="sched-weekend-3" class="fw-medium"><span class="phase-dot" style="background:#6f42c1"></span><i class="bi bi-moon-stars me-1"></i>Sleep</label>
+                        <span class="sched-duration small text-muted" id="sched-dur-weekend-3"></span>
+                        <input type="time" class="form-control form-control-sm" id="sched-weekend-3" value="00:00">
+                      </div>
+                      <div class="sched-bar mt-2" id="sched-bar-weekend"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <h6 class="fw-semibold mt-4 mb-2">Your week</h6>
+                <div id="sched-week" class="sched-week"></div>
+
+                <div class="d-flex flex-wrap gap-2 mt-4 align-items-center">
+                  <button id="sched-save-btn" class="btn btn-primary" disabled>
+                    <i class="bi bi-upload me-1"></i> Save to device
+                  </button>
+                  <button id="sched-read-btn" class="btn btn-outline-secondary" disabled title="Read the schedule stored on the device">
+                    <i class="bi bi-arrow-repeat me-1"></i> Read from device
+                  </button>
+                  <button id="sched-clear-btn" class="btn btn-outline-danger ms-auto" disabled title="Remove the schedule from the device">
+                    <i class="bi bi-trash me-1"></i> Remove from device
+                  </button>
+                </div>
+                <div id="sched-status" class="small text-muted mt-2"></div>
+              </div>
+            </div>
+          </div>
+
           <div class="tab-pane fade" id="cli" role="tabpanel">
             <div class="card">
               <div class="card-header">
@@ -332,6 +571,21 @@
                           </button>
                         </div>
                         <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-common" data-cmd="PRINT_VERSION" data-immediate="true">
+                            <i class="bi bi-tag me-1"></i> PRINT_VERSION
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-common" data-cmd="GET_TIME" data-immediate="true">
+                            <i class="bi bi-clock me-1"></i> GET_TIME
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-common" data-cmd="DATA_STATUS" data-immediate="true">
+                            <i class="bi bi-database me-1"></i> DATA_STATUS
+                          </button>
+                        </div>
+                        <div class="col-auto">
                           <button class="btn btn-sm cmd-btn cmd-btn-common" data-cmd="SYS_RST" data-immediate="true">
                             <i class="bi bi-arrow-clockwise me-1"></i> SYS_RST
                           </button>
@@ -363,32 +617,32 @@
                     <div class="tab-pane fade" id="settings-commands" role="tabpanel">
                       <div class="row g-2">
                         <div class="col-auto">
-                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_LANG">
+                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_LANG" title="0=TR, 1=EN">
                             <i class="bi bi-translate me-1"></i> Language
                           </button>
                         </div>
                         <div class="col-auto">
-                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_FREQ">
+                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_FREQ" title="0=3 min, 1=5 min, 2=10 min">
                             <i class="bi bi-clock-history me-1"></i> Frequency
                           </button>
                         </div>
                         <div class="col-auto">
-                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_TYPE">
+                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_TYPE" title="0=Celsius/Meter, 1=Fahrenheit/Feet">
                             <i class="bi bi-ui-radios me-1"></i> Type
                           </button>
                         </div>
                         <div class="col-auto">
-                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_BUZZER">
+                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_BUZZER" title="0=ON, 1=OFF">
                             <i class="bi bi-bell me-1"></i> Buzzer
                           </button>
                         </div>
                         <div class="col-auto">
-                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_INSTALL">
+                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_INSTALL" title="0=REQUESTED, 1=NOT REQUESTED">
                             <i class="bi bi-tools me-1"></i> Install
                           </button>
                         </div>
                         <div class="col-auto">
-                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_STARTUP">
+                          <button class="btn btn-sm cmd-btn cmd-btn-settings" data-cmd="SET_STARTUP" title="0=OFF, 1=ON">
                             <i class="bi bi-power me-1"></i> Startup
                           </button>
                         </div>
@@ -419,6 +673,36 @@
                           </button>
                         </div>
                         <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_PM25_OFFSET">
+                            <i class="bi bi-sliders me-1"></i> PM2.5 Offset
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_PM25_MULT">
+                            <i class="bi bi-sliders me-1"></i> PM2.5 Mult
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_PM10_OFFSET">
+                            <i class="bi bi-sliders me-1"></i> PM10 Offset
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_PM10_MULT">
+                            <i class="bi bi-sliders me-1"></i> PM10 Mult
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_VOC_OFFSET">
+                            <i class="bi bi-sliders me-1"></i> VOC Offset
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_VOC_MULT">
+                            <i class="bi bi-sliders me-1"></i> VOC Mult
+                          </button>
+                        </div>
+                        <div class="col-auto">
                           <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_TEMP_OFFSET">
                             <i class="bi bi-thermometer me-1"></i> Temp Offset
                           </button>
@@ -426,6 +710,26 @@
                         <div class="col-auto">
                           <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_TEMP_MULT">
                             <i class="bi bi-thermometer me-1"></i> Temp Mult
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_HUM_OFFSET">
+                            <i class="bi bi-droplet me-1"></i> Hum Offset
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_HUM_MULT">
+                            <i class="bi bi-droplet me-1"></i> Hum Mult
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_BATT_OFFSET">
+                            <i class="bi bi-battery me-1"></i> Batt Offset
+                          </button>
+                        </div>
+                        <div class="col-auto">
+                          <button class="btn btn-sm cmd-btn cmd-btn-calibration" data-cmd="CAL_BATT_MULT">
+                            <i class="bi bi-battery me-1"></i> Batt Mult
                           </button>
                         </div>
                       </div>
@@ -485,25 +789,68 @@
           <!-- Firmware Update Tab -->
           <div class="tab-pane fade" id="firmware" role="tabpanel">
             <div class="card">
-              <div class="card-header">
-                <i class="bi bi-arrow-up-circle me-1"></i> Firmware Update
+              <div class="card-header d-flex align-items-center">
+                <span><i class="bi bi-arrow-up-circle me-1"></i> Firmware</span>
+                <button id="fw-check" class="btn btn-sm btn-outline-secondary ms-auto">
+                  <i class="bi bi-arrow-repeat me-1"></i> Check for updates
+                </button>
               </div>
               <div class="card-body">
-                <div class="alert alert-info">
-                  <h5><i class="bi bi-info-circle me-2"></i>Firmware Update Process</h5>
-                  <ol class="mb-0">
-                    <li>Connect your device</li>
-                    <li>Select the firmware file (.uf2)</li>
-                    <li>Click "Update Firmware"</li>
-                    <li>Wait for the update to complete</li>
+                <!-- What is on the device and what is available -->
+                <div class="fw-summary">
+                  <div class="fw-cell">
+                    <div class="fw-label">Your Odak</div>
+                    <div class="fw-value" id="fw-board">Not connected</div>
+                    <div class="fw-sub" id="fw-installed">Connect Odak to check its firmware</div>
+                  </div>
+                  <div class="fw-cell">
+                    <div class="fw-label">Latest firmware</div>
+                    <div class="fw-value" id="fw-latest">—</div>
+                    <div class="fw-sub" id="fw-latest-date"></div>
+                  </div>
+                  <div class="fw-cell fw-state" id="fw-state">
+                    <i class="bi bi-hourglass"></i>
+                    <span id="fw-state-text">Waiting for the device</span>
+                  </div>
+                </div>
+                <div id="fw-notes" class="fw-notes d-none"></div>
+
+                <!-- When the board can't be read from the device -->
+                <div id="fw-unknown" class="fw-unknown d-none">
+                  <h6 class="fw-semibold mb-2"><i class="bi bi-question-circle me-1"></i> Which Odak do you have?</h6>
+                  <p class="small mb-2" id="fw-unknown-why">The app could not read the firmware version from your Odak.</p>
+                  <ol class="small mb-3">
+                    <li>Press and hold the <b>right-side button</b> on Odak for <b>5 seconds</b>, then let go. Odak restarts.</li>
+                    <li>Watch the start-up screen: the version is in the <b>top-right corner</b>, for example <span class="fw-code">v2.9</span>.</li>
+                    <li>Choose the board that matches the first number:</li>
                   </ol>
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <select id="fw-board-select" class="form-select" style="max-width: 22rem;">
+                      <option value="">Choose your board…</option>
+                      <option value="v1">v1.x — original board</option>
+                      <option value="v2">v2.x — new board</option>
+                    </select>
+                    <span class="small text-muted" id="fw-board-hint"></span>
+                  </div>
                 </div>
 
+                <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+                  <button id="fw-install" class="btn btn-primary" disabled>
+                    <i class="bi bi-download me-1"></i> <span id="fw-install-text">Install update</span>
+                  </button>
+                  <span class="small text-muted" id="fw-install-note"></span>
+                </div>
+
+                <div class="progress mt-3 d-none" id="update-progress-container">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated" id="update-progress" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div id="update-status" class="mt-3"></div>
+
                 <script>
-                  // Show macOS Full Disk Access warning only on macOS (darwin)
+                  // macOS asks for Full Disk Access before the app can write to the RPI-RP2 drive
                   if (navigator.userAgent.includes('Macintosh') || navigator.platform === 'MacIntel') {
                     document.write(`
-                      <div class="alert alert-warning d-flex align-items-center mb-3">
+                      <div class="alert alert-warning d-flex align-items-center mt-3 mb-0">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         <div>
                           <strong>macOS Full Disk Access Required (if not given):</strong><br>
@@ -519,27 +866,19 @@
                   }
                 </script>
 
-                <div class="mb-4">
-                  <label for="firmware-file" class="form-label">Firmware File</label>
-                  <div class="input-group">
+                <details class="fw-advanced mt-4">
+                  <summary>Advanced: install a firmware file</summary>
+                  <p class="small text-muted mt-2 mb-2">For test builds from Mountain Labs. Make sure the file is for your board.</p>
+                  <div class="input-group mb-2">
                     <input type="text" id="firmware-file" class="form-control" readonly placeholder="No file selected">
                     <button class="btn btn-outline-primary" id="select-firmware">
                       <i class="bi bi-folder2-open me-1"></i> Browse
                     </button>
                   </div>
-                </div>
-
-                <div class="progress mb-4 d-none" id="update-progress-container">
-                  <div class="progress-bar progress-bar-striped progress-bar-animated" id="update-progress" role="progressbar" style="width: 0%"></div>
-                </div>
-
-                <div class="d-grid">
-                  <button id="update-firmware" class="btn btn-primary" disabled>
-                    <i class="bi bi-upload me-1"></i> Update Firmware
+                  <button id="update-firmware" class="btn btn-outline-primary" disabled>
+                    <i class="bi bi-upload me-1"></i> Install this file
                   </button>
-                </div>
-
-                <div id="update-status" class="mt-3"></div>
+                </details>
               </div>
             </div>
           </div>
@@ -548,9 +887,30 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <!-- Asked when a newer firmware is available for the connected Odak -->
+  <div class="modal fade" id="fw-modal" tabindex="-1" aria-labelledby="fw-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="fw-modal-title"><i class="bi bi-arrow-up-circle me-2"></i>Firmware update available</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2" id="fw-modal-text"></p>
+          <div class="fw-notes small" id="fw-modal-notes"></div>
+          <p class="small text-muted mt-3 mb-0">Keep Odak plugged in. The update takes about a minute; Odak restarts and the app reconnects by itself.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" id="fw-modal-later" data-bs-dismiss="modal">Not now</button>
+          <button type="button" class="btn btn-primary" id="fw-modal-update"><i class="bi bi-download me-1"></i> Update now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../node_modules/chart.js/dist/chart.umd.js"></script>
+  <script src="../node_modules/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="./renderer.js" type="module"></script>
 </body>
 </html>

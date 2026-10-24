@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self'">
+  <title>About ODAK Air Quality Monitor</title>
+  <link href="../node_modules/@fontsource/inter/400.css" rel="stylesheet">
+  <link href="../node_modules/@fontsource/inter/700.css" rel="stylesheet">
+  <style>
+    :root {
+      --ml-green: #2c5944;
+      --text: #212529;
+      --muted: #6c757d;
+      --border: #e3e7ea;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: #fff;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .banner {
+      background: var(--ml-green);
+    }
+    .banner img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    main { padding: 24px 32px 28px; }
+    .app {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .app img { width: 48px; height: 48px; }
+    .app h1 { font-size: 18px; margin: 0; font-weight: 700; }
+    .app .version { color: var(--muted); font-size: 13px; }
+    h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ml-green);
+      margin: 20px 0 6px;
+    }
+    p { margin: 0 0 10px; }
+    ul.links { list-style: none; padding: 0; margin: 0; }
+    ul.links li { padding: 3px 0; }
+    ul.links span { display: inline-block; width: 80px; color: var(--muted); }
+    a { color: var(--ml-green); font-weight: 500; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: 22px;
+      padding-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <img src="../assets/images/mountain-labs-logo.webp" alt="Mountain Labs">
+  </div>
+  <main>
+    <div class="app">
+      <img src="../assets/icons/odak.png" alt="">
+      <div>
+        <h1>ODAK Air Quality Monitor</h1>
+        <div class="version">Version <span id="version">--</span></div>
+      </div>
+    </div>
+
+    <p>
+      Desktop companion for the Odak Clean Air Assistant: watch live sensor readings,
+      log data, calibrate the sensors, set the device clock and update the firmware.
+    </p>
+
+    <h2>About Mountain Labs</h2>
+    <p>
+      Mountain Labs designs and builds the <b>Odak Clean Air Assistant</b>, a wooden
+      air quality monitor with an e-ink display. Odak measures CO<sub>2</sub>, PM2.5
+      and VOCs to help you breathe cleaner air at home.
+    </p>
+
+    <h2>Links</h2>
+    <ul class="links">
+      <li><span>Website</span><a href="https://mountainlabs.io" target="_blank">mountainlabs.io</a></li>
+      <li><span>Source</span><a href="https://github.com/mountainlabs-dev/odak-gui" target="_blank">github.com/mountainlabs-dev/odak-gui</a></li>
+      <li><span>LinkedIn</span><a href="https://www.linkedin.com/company/mountainlabs-as" target="_blank">mountainlabs-as</a></li>
+      <li><span>Instagram</span><a href="https://www.instagram.com/inmountainlabs/" target="_blank">@inmountainlabs</a></li>
+      <li><span>X</span><a href="https://x.com/mountainlabs" target="_blank">@mountainlabs</a></li>
+    </ul>
+
+    <footer>
+      © <span id="year"></span> Mountain Labs · Released under the MIT License
+    </footer>
+  </main>
+
+  <script>
+    // The main process passes the app version in the query string
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById('version').textContent = params.get('version') || '--';
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

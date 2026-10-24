@@ -1,0 +1,74 @@
+# Ubuntu App Center / Snap Store package.
+#
+# The app is built by Electron Forge first; CI then runs snapcraft on the result:
+#   npx electron-forge package
+#   mv "out/ODAK Air Quality Monitor-linux-x64" out/linux-unpacked
+#   snapcraft pack
+# (see .github/workflows/release.yml, which also sets `version` from package.json)
+name: odak-gui
+title: Odak Air Quality Monitor
+version: '0.5.0'
+summary: Live readings, history and Air Coach results from your Odak
+description: |
+  The desktop companion for the Odak Clean Air Assistant by Mountain Labs.
+
+  * Live CO2, PM, VOC, temperature and humidity readings and charts
+  * Up to six months of history from the device: day, week, month and 6-month views,
+    rated for each part of your day like the device's My day screens
+  * Air Coach results: actions Odak suggested, what you did, and how often the air improved
+  * Your daily plan and priorities (allergy, infection, fatigue & migraine, focus)
+  * Calibration, device settings, data logging and firmware updates
+
+  Plug your Odak in with a USB cable. To let the app reach it, connect the USB interface once:
+
+    sudo snap connect odak-gui:raw-usb
+
+  and make sure your user is in the "dialout" group (sudo usermod -aG dialout $USER, then log in again).
+website: https://mountainlabs.io
+contact: https://mountainlabs.io
+source-code: https://github.com/mountainlabs-dev/odak-gui
+issues: https://github.com/mountainlabs-dev/odak-gui/issues
+license: MIT
+icon: snap/gui/odak-gui.png
+
+base: core24
+grade: stable
+confinement: strict
+platforms:
+  amd64:
+
+apps:
+  odak-gui:
+    # Chromium's setuid sandbox cannot run inside a snap; snap confinement takes its place
+    command: odak-gui/odak-gui --no-sandbox
+    desktop: meta/gui/odak-gui.desktop
+    extensions: [gnome]
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+    plugs:
+      - home              # firmware files, logs and backups the user picks
+      - removable-media   # the RPI-RP2 drive during firmware updates
+      - raw-usb           # the Odak's USB serial port (/dev/ttyACM*)
+      - hardware-observe  # listing serial ports through udev
+      - browser-support
+      - network           # checking for and downloading firmware updates
+
+parts:
+  odak-gui:
+    plugin: dump
+    source: out/linux-unpacked
+    organize:
+      '*': odak-gui/
+    stage-packages:
+      - libnss3
+      - libnspr4
+      - libasound2t64
+      - libxss1
+      - libxtst6
+      - libgbm1
+      - libxshmfence1
+      - libsecret-1-0
+      - libnotify4
+      - libuuid1
+    prime:
+      - -odak-gui/chrome-sandbox
