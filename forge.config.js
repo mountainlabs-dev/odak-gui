@@ -3,6 +3,7 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 const path = require('path');
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 const { version, description } = require('./package.json');
 
 // Microsoft Store identity: copy these from Partner Center (Product management > Product identity).
@@ -31,6 +32,7 @@ module.exports = {
     asar: true,
     icon: './assets/icons/odak', // Point to the base filename without extension
     executableName: 'odak-gui', // Avoid spaces in the Linux binary name
+    appBundleId: 'io.mountainlabs.odak-gui',
     // Keep files the desktop app doesn't use out of the package
     ignore: [
       /^\/web(\/|$)/,
@@ -51,6 +53,21 @@ module.exports = {
   // are; rebuilding from source needs a C++ toolchain and broke on newer Visual Studio versions.
   rebuildConfig: {
     ignoreModules: ['@serialport/bindings-cpp'],
+  },
+  hooks: {
+    // Packaging edits Info.plist and resources after Electron's own ad-hoc signature, and the fuses
+    // plugin re-signs only the main binary, so the bundle seal is broken and macOS says the
+    // downloaded app "is damaged". Without an Apple Developer ID, re-sign the whole bundle ad hoc.
+    postPackage: async (_config, { platform, outputPaths }) => {
+      if (platform !== 'darwin' && platform !== 'mas') return;
+      for (const dir of outputPaths) {
+        for (const app of fs.readdirSync(dir).filter((f) => f.endsWith('.app'))) {
+          const appPath = path.join(dir, app);
+          execFileSync('codesign', ['--force', '--deep', '--sign', '-', appPath], { stdio: 'inherit' });
+          execFileSync('codesign', ['--verify', '--deep', '--strict', appPath], { stdio: 'inherit' });
+        }
+      }
+    },
   },
   makers: [
     {

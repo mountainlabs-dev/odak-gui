@@ -78,6 +78,14 @@ sudo usermod -aG dialout $USER
 
 Firmware updates on Linux use `udisks2` to mount the `RPI-RP2` drive if the desktop does not mount it automatically.
 
+### macOS
+
+Download the `.dmg` for your Mac (`arm64` for Apple Silicon, `x64` for Intel) and drag the app to Applications. The app is not yet signed with an Apple Developer ID, so the first time you open it macOS says it cannot verify the developer: click **Done**, then open **System Settings → Privacy & Security** and click **Open Anyway**. If it still won't open, clear the download quarantine flag:
+
+```bash
+xattr -cr "/Applications/ODAK Air Quality Monitor.app"
+```
+
 ## Usage
 
 ### Connecting to a Device
