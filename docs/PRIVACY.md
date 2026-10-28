@@ -1,9 +1,12 @@
-# Odak Air Quality Monitor: Privacy Policy
+# Mountain Labs: Privacy Policy
 
-Last updated: 24 October 2026
+*Türkçe: [PRIVACY.tr.md](PRIVACY.tr.md)*
 
-This policy covers the Odak Air Quality Monitor desktop app by Mountain Labs Teknoloji AŞ
-("Mountain Labs"), on Windows (Microsoft Store and installer) and Linux (Snap Store and .deb package).
+Last updated: 28 October 2026
+
+This policy covers the Mountain Labs desktop app for the Odak air quality monitor (previously
+called *Odak Air Quality Monitor*), by Mountain Labs Teknoloji AŞ ("Mountain Labs"), on macOS (Mac
+App Store and .dmg), Windows (Microsoft Store and download) and Linux (Snap Store and .deb package).
 
 ## What the app does with your data
 
@@ -14,6 +17,8 @@ The app talks to your Odak device over its USB cable. Everything it reads stays 
 - **Files you save** (logs, history exports, backups, console exports) go only where you choose.
 - **Your plan and priorities** (schedule, allergy / infection / fatigue / focus) are stored on your
   Odak device and in the app on your computer.
+- **Your settings** (interface language, board type, automatic clock setting) are kept in the app
+  on your computer.
 
 ## What the app does not do
 
@@ -34,8 +39,18 @@ Your priorities never leave your computer and device.
 
 ## Deleting your data
 
-Uninstalling the app removes its folder. Files you exported yourself stay where you saved them.
-To clear the device's own stored measurements, use the `$DATA_ERASE,1` command in the app's CLI tab.
+The app keeps its data in one folder:
+
+- **macOS, Mac App Store:** `~/Library/Containers/io.mountainlabs.app`
+- **macOS, .dmg:** `~/Library/Application Support/Mountain Labs` (or `ODAK Air Quality Monitor`
+  if you used the app before it was renamed)
+- **Windows:** `%APPDATA%\Mountain Labs` (or `ODAK Air Quality Monitor`); uninstalling the Microsoft
+  Store version removes it
+- **Linux:** `~/.config/Mountain Labs` (or `ODAK Air Quality Monitor`); removing the snap removes it
+
+Delete that folder to remove everything the app stored. Files you exported yourself stay where you
+saved them. To clear the device's own stored measurements, use the `$DATA_ERASE,1` command in the
+app's CLI tab.
 
 ## Children
 
