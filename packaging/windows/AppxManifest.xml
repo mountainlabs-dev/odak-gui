@@ -13,8 +13,10 @@
     <Description>{{description}}</Description>
     <Logo>assets\StoreLogo.png</Logo>
   </Properties>
+  <!-- The interface languages (src/locales); Partner Center only takes store listings in these -->
   <Resources>
     <Resource Language="en-us" />
+    <Resource Language="tr-tr" />
   </Resources>
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
