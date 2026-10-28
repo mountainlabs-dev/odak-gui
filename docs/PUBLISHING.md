@@ -66,13 +66,37 @@ The workflow then:
 
 You can also run it by hand: Actions → Build and release → Run workflow (builds only, no upload).
 
+### Without GitHub Actions (on a Mac)
+
+Everything for macOS and Windows also builds on a Mac, no Windows PC needed:
+
+```bash
+# Microsoft Store package (.msix); set the four MSSTORE_* values from Partner Center first
+MSSTORE_IDENTITY_NAME=… MSSTORE_PUBLISHER=… MSSTORE_PUBLISHER_DISPLAY_NAME=… MSSTORE_DISPLAY_NAME=… npm run make:msix
+# Windows app as a ZIP for the GitHub release (Setup.exe needs Windows)
+npm run make:win-zip
+# Mac DMGs for the GitHub release
+npx electron-forge make --targets @electron-forge/maker-dmg --arch=arm64
+npx electron-forge make --targets @electron-forge/maker-dmg --arch=x64
+# Mac App Store (see 5c)
+MAS_BUILD_NUMBER=… npm run make:mas
+```
+
+`scripts/make-msix.js` writes the MSIX itself (ZIP, block map and content types, as MakeAppx does),
+unsigned: the Store signs it. To try it on a Windows PC before submitting, unzip it, turn on
+Developer Mode, and run `Add-AppxPackage -Register AppxManifest.xml` in PowerShell in that folder.
+
+Then on GitHub: Releases → Draft a new release → choose the version tag, and attach the DMGs and the
+Windows ZIP from `out/make/`. The `.deb` and `.snap` need Linux (or the workflow).
+
 ## 5a. Microsoft Store submission
 
 1. Test first: from the workflow's `windows` artifact, install `Odak-test-certificate.cer` into
    *Local Machine → Trusted People* on a Windows 11 PC, then double-click the `.appx`. Check connect,
    Insights sync and a firmware update with a real Odak.
 2. Partner Center → your app → Start submission:
-   - **Packages**: upload the `.appx` from the workflow artifact.
+   - **Packages**: upload the `.appx` from the workflow artifact, or the `.msix` from
+     `npm run make:msix` (see "Without GitHub Actions" above).
    - **Properties**: category *Utilities & tools*; privacy policy URL (publish `docs/PRIVACY.md` on
      mountainlabs.io first); support contact.
    - **Age ratings**: the questionnaire (no user content, no purchases, no data collection).

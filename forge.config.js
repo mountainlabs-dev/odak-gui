@@ -6,24 +6,13 @@ const fs = require('fs');
 const { execFileSync } = require('child_process');
 const { version, description, productName } = require('./package.json');
 
-// Microsoft Store identity: copy these from Partner Center (Product management > Product identity).
-// The defaults build a package you can sideload for testing; the Store rejects them.
-const msStore = {
-  identityName: process.env.MSSTORE_IDENTITY_NAME || 'MountainLabs.OdakAirQualityMonitor',
-  publisher: process.env.MSSTORE_PUBLISHER || 'CN=Mountain Labs Teknoloji',
-  publisherDisplayName: process.env.MSSTORE_PUBLISHER_DISPLAY_NAME || 'Mountain Labs',
-  displayName: process.env.MSSTORE_DISPLAY_NAME || 'Odak Air Quality Monitor',
-};
+const { msStore, manifestXml } = require('./packaging/windows/store');
 
-/** Fill in packaging/windows/AppxManifest.xml for this build and return its path. */
+/** Write the Microsoft Store manifest for this build (see packaging/windows/store.js) and return its path. */
 function storeManifest() {
-  const xmlEscape = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const values = { ...msStore, version: `${version}.0`, description };
-  const xml = fs.readFileSync(path.join(__dirname, 'packaging/windows/AppxManifest.xml'), 'utf8')
-    .replace(/\{\{(\w+)\}\}/g, (_, key) => xmlEscape(values[key]));
   const out = path.join(__dirname, 'out', 'AppxManifest.xml');
   fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, xml);
+  fs.writeFileSync(out, manifestXml());
   return out;
 }
 
@@ -90,7 +79,7 @@ module.exports = {
       /^\/snap(\/|$)/,
       /^\/docs(\/|$)/,
       /^\/firmware(\/|$)/,
-      /^\/scripts\/publish-firmware\.sh$/,
+      /^\/scripts\/(publish-firmware\.sh|make-msix\.js)$/,
       /^\/LICENSE$/,
       /^\/\.github(\/|$)/,
       /^\/out(\/|$)/,
@@ -130,14 +119,17 @@ module.exports = {
       };
       strip(buildPath);
     },
-    // serialport ships prebuilt binaries for every OS; a Mac app needs only darwin-x64+arm64, and the
-    // App Store validates every binary in the bundle
-    packageAfterPrune: async (_config, buildPath, _electronVersion, platform) => {
-      if (platform !== 'darwin' && platform !== 'mas') return;
+    // serialport ships prebuilt binaries for every OS; Mac and Windows builds keep only their own
+    // (the App Store and the Microsoft Store check every binary in the package)
+    packageAfterPrune: async (_config, buildPath, _electronVersion, platform, arch) => {
+      // Mac: the one universal darwin-x64+arm64 build; Windows: the build for this architecture
+      const keep = platform === 'win32' ? (dir) => dir === `win32-${arch}`
+        : platform === 'darwin' || platform === 'mas' ? (dir) => dir.startsWith('darwin-') : null;
+      if (!keep) return;
       const prebuilds = path.join(buildPath, 'node_modules/@serialport/bindings-cpp/prebuilds');
       if (!fs.existsSync(prebuilds)) return;
       for (const dir of fs.readdirSync(prebuilds)) {
-        if (!dir.startsWith('darwin-')) fs.rmSync(path.join(prebuilds, dir), { recursive: true });
+        if (!keep(dir)) fs.rmSync(path.join(prebuilds, dir), { recursive: true });
       }
     },
     // Packaging edits Info.plist and resources after Electron's own ad-hoc signature, and the fuses

@@ -9,6 +9,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "make:mas": "electron-forge make --platform=mas --arch=universal --targets @electron-forge/maker-pkg",
+    "make:msix": "electron-forge package --platform=win32 --arch=x64 && node scripts/make-msix.js",
+    "make:win-zip": "electron-forge make --platform=win32 --arch=x64 --targets @electron-forge/maker-zip",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\""
   },
