@@ -17,7 +17,7 @@ const path = require('path');
 const crypto = require('crypto');
 const zlib = require('zlib');
 const { version, productName } = require('../package.json');
-const { hasStoreIdentity, manifestXml } = require('../packaging/windows/store');
+const { manifestXml } = require('../packaging/windows/store');
 
 const ROOT = path.join(__dirname, '..');
 const APP_DIR = process.argv[2] || path.join(ROOT, 'out', `${productName}-win32-x64`);
@@ -75,9 +75,6 @@ function compressBlocks(data) {
 function main() {
   if (!fs.existsSync(path.join(APP_DIR, 'odak-gui.exe'))) {
     throw new Error(`No Windows app at ${APP_DIR}. Run: npx electron-forge package --platform=win32 --arch=x64`);
-  }
-  if (!hasStoreIdentity()) {
-    console.warn('Warning: MSSTORE_* identity not set; this package is for testing and the Store will reject it.');
   }
 
   const parts = [

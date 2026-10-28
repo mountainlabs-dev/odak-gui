@@ -6,7 +6,8 @@
 #   macOS:   .dmg for Intel and Apple Silicon (GitHub release; unsigned until there is an Apple
 #            Developer ID, so the first launch needs right-click > Open)
 #
-# Repository settings it reads (Settings > Secrets and variables > Actions):
+# Repository settings it reads (Settings > Secrets and variables > Actions); the MSSTORE_* ones are
+# optional and override the Store identity in packaging/windows/store.js:
 #   secrets.SNAPCRAFT_STORE_CREDENTIALS   from `snapcraft export-login` (optional: without it the
 #                                         snap is built but not uploaded)
 #   vars.MSSTORE_IDENTITY_NAME            Partner Center > Product identity > Package/Identity/Name
@@ -79,7 +80,7 @@ jobs:
       - name: Make a test signing certificate
         shell: pwsh
         run: |
-          $publisher = if ($env:MSSTORE_PUBLISHER) { $env:MSSTORE_PUBLISHER } else { 'CN=Mountain Labs Teknoloji' }
+          $publisher = if ($env:MSSTORE_PUBLISHER) { $env:MSSTORE_PUBLISHER } else { 'CN=0FAAF412-56E3-45CB-B0D7-4AB33CBF5B5E' }
           $password = [guid]::NewGuid().ToString()
           $cert = New-SelfSignedCertificate -Type Custom -Subject $publisher -KeyUsage DigitalSignature `
             -FriendlyName 'Odak test signing' -CertStoreLocation 'Cert:\CurrentUser\My' `

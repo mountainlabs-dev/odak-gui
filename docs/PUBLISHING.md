@@ -26,18 +26,19 @@ snapcraft register odak-gui
 ```
 
 **Microsoft Store** — Partner Center → Apps and games → New product → MSIX or PWA app →
-reserve **Odak Air Quality Monitor** (fallback: *Odak Air — Mountain Labs*; then also set
-`MSSTORE_DISPLAY_NAME` below).
+reserve the app name. Done: **Mountain Labs** (identity `MountainLabs.MountainLabs`, already in
+`packaging/windows/store.js`).
 
 ## 3. Connect the stores to GitHub
 
 GitHub → repository → Settings → Secrets and variables → Actions.
 
-**Variables** (Partner Center → your app → Product management → Product identity):
+**Variables** (optional: `packaging/windows/store.js` already has the identity from Partner Center →
+your app → Product management → Product identity; set these only to build for another listing):
 
 | Variable | Copy from |
 |---|---|
-| `MSSTORE_IDENTITY_NAME` | Package/Identity/Name (e.g. `12345MountainLabs.OdakAirQualityMonitor`) |
+| `MSSTORE_IDENTITY_NAME` | Package/Identity/Name (`MountainLabs.MountainLabs`) |
 | `MSSTORE_PUBLISHER` | Package/Identity/Publisher (`CN=…`) |
 | `MSSTORE_PUBLISHER_DISPLAY_NAME` | Package/Properties/PublisherDisplayName |
 | `MSSTORE_DISPLAY_NAME` | The name you reserved |
@@ -66,13 +67,18 @@ The workflow then:
 
 You can also run it by hand: Actions → Build and release → Run workflow (builds only, no upload).
 
-### Without GitHub Actions (on a Mac)
+### Without GitHub Actions (on a Mac or a Windows PC)
 
-Everything for macOS and Windows also builds on a Mac, no Windows PC needed:
+Everything for macOS and Windows also builds on a Mac, no Windows PC needed. On a Windows PC (with
+Node.js LTS and the Windows 11 SDK), prefer `npm run make:msstore` for the Store package: Microsoft's
+MakeAppx builds it (`out\make\appx\x64\OdakGui.appx`). Set `MSSTORE_DEV_CERT` (a .pfx whose subject
+is the publisher `CN=…`) and `MSSTORE_DEV_CERT_PASSWORD` for a test signature; the Store re-signs it.
+**Known issue:** MakeAppx rejects the `.msix` from `make:msix` ("The package block map is not
+valid"), so upload the MakeAppx package until that is fixed.
 
 ```bash
-# Microsoft Store package (.msix); set the four MSSTORE_* values from Partner Center first
-MSSTORE_IDENTITY_NAME=… MSSTORE_PUBLISHER=… MSSTORE_PUBLISHER_DISPLAY_NAME=… MSSTORE_DISPLAY_NAME=… npm run make:msix
+# Microsoft Store package (.msix)
+npm run make:msix
 # Windows app as a ZIP for the GitHub release (Setup.exe needs Windows)
 npm run make:win-zip
 # Mac DMGs for the GitHub release

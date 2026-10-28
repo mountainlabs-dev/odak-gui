@@ -5,18 +5,14 @@ const fs = require('fs');
 const path = require('path');
 const { version, description } = require('../../package.json');
 
-// Copy these from Partner Center (Product management > Product identity).
-// The defaults build a package you can sideload for testing; the Store rejects them.
+// From Partner Center (Product management > Product identity). The MSSTORE_* environment
+// variables override them, e.g. to build for another Store listing.
 const msStore = {
-  identityName: process.env.MSSTORE_IDENTITY_NAME || 'MountainLabs.OdakAirQualityMonitor',
-  publisher: process.env.MSSTORE_PUBLISHER || 'CN=Mountain Labs Teknoloji',
+  identityName: process.env.MSSTORE_IDENTITY_NAME || 'MountainLabs.MountainLabs',
+  publisher: process.env.MSSTORE_PUBLISHER || 'CN=0FAAF412-56E3-45CB-B0D7-4AB33CBF5B5E',
   publisherDisplayName: process.env.MSSTORE_PUBLISHER_DISPLAY_NAME || 'Mountain Labs',
-  displayName: process.env.MSSTORE_DISPLAY_NAME || 'Odak Air Quality Monitor',
+  displayName: process.env.MSSTORE_DISPLAY_NAME || 'Mountain Labs',
 };
-
-/** True when every identity value came from Partner Center (environment), not the defaults. */
-const hasStoreIdentity = () => ['MSSTORE_IDENTITY_NAME', 'MSSTORE_PUBLISHER', 'MSSTORE_PUBLISHER_DISPLAY_NAME', 'MSSTORE_DISPLAY_NAME']
-  .every((name) => process.env[name]);
 
 /** AppxManifest.xml for this version, from packaging/windows/AppxManifest.xml. */
 function manifestXml() {
@@ -26,4 +22,4 @@ function manifestXml() {
     .replace(/\{\{(\w+)\}\}/g, (_, key) => xmlEscape(values[key]));
 }
 
-module.exports = { msStore, hasStoreIdentity, manifestXml };
+module.exports = { msStore, manifestXml };
