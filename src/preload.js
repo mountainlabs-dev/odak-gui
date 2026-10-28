@@ -72,5 +72,6 @@ contextBridge.exposeInMainWorld('api', {
 });
 
 contextBridge.exposeInMainWorld('odakPlatform', {
-  platform: process.platform
+  platform: process.platform,
+  mas: !!process.mas  // Mac App Store build (sandboxed)
 });

@@ -1,4 +1,4 @@
-# Publishing on the Microsoft Store and the Ubuntu App Center
+# Publishing on the Microsoft Store, the Ubuntu App Center and the Mac App Store
 
 The repository builds every package on GitHub Actions (`.github/workflows/release.yml`) whenever a
 version tag is pushed. The steps below are the ones that need a person: accounts, names and the
@@ -110,6 +110,48 @@ Forum post for step 2 (title: *Auto-connect request for odak-gui: raw-usb, remov
 >   (mounted under /media) during firmware updates.
 >
 > Source: https://github.com/mountainlabs-dev/odak-gui
+
+## 5c. Mac App Store
+
+Built and uploaded from a Mac (not in GitHub Actions: it needs your signing certificates).
+
+**One-time setup** at https://developer.apple.com/account (Apple Developer Program):
+
+1. **Identifiers** → `+` → App IDs → App → Bundle ID (explicit) **`io.mountainlabs.app`**
+   (or the one already used for the app in App Store Connect; then set `MAS_BUNDLE_ID`).
+2. **Certificates** → `+`, once each: **Apple Distribution** and **Mac Installer Distribution**.
+   Download both and double-click them so they land in this Mac's login keychain. Check with
+   `security find-identity -v` (the installer one shows as *3rd Party Mac Developer Installer*).
+3. **Profiles** → `+` → Distribution → **Mac App Store Connect** → the bundle id above → the Apple
+   Distribution certificate. Download it and save it as `packaging/macos/embedded.provisionprofile`
+   (git ignores it).
+4. App Store Connect → Apps → `+` New App → macOS, the same bundle id, SKU e.g. `odak-gui`.
+
+**Each release:**
+
+```bash
+MAS_BUILD_NUMBER=1 npm run make:mas
+```
+
+`MAS_BUILD_NUMBER` must go up with every upload, even for the same version. The result is
+`out/make/Mountain Labs-<version>-universal.pkg` (Apple Silicon and Intel in one).
+Upload it with Apple's **Transporter** app (free on the Mac App Store), then pick the build in
+App Store Connect → your app → macOS App → Build.
+
+**Review notes** for App Review (App Information → App Review Information):
+
+> Mountain Labs is the companion app for the Odak air-quality monitor by Mountain Labs,
+> connected over USB. It uses the serial-port entitlement to read measurements and settings from
+> the device. Firmware updates restart the device into its USB bootloader, which appears as a drive
+> named RPI-RP2; the user selects that drive in an Open panel and the app copies the firmware file
+> onto it. Without an Odak device the app shows no live data; a demo video is attached.
+
+Attach a short screen recording of connecting an Odak and running a firmware update: reviewers
+don't have the hardware.
+
+The App Store build differs from the DMG only in firmware updates: it is sandboxed, so instead of
+`scripts/flash.sh` (which needs Full Disk Access) it uses `src/mac-flash.js` and asks the user to
+choose the RPI-RP2 drive.
 
 ## Keep shipping the .deb
 

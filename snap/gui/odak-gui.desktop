@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Odak Air Quality Monitor
+Name=Mountain Labs
 GenericName=Air Quality Monitor
 Comment=Live readings, history and Air Coach results from your Odak
 Exec=odak-gui %U
@@ -8,4 +8,4 @@ Type=Application
 Terminal=false
 Categories=Utility;Science;
 Keywords=air;quality;co2;pm2.5;odak;
-StartupWMClass=ODAK Air Quality Monitor
+StartupWMClass=Mountain Labs

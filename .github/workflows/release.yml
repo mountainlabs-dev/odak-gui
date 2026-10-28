@@ -41,7 +41,7 @@ jobs:
         run: npx electron-forge make --targets @electron-forge/maker-deb
       - name: Prepare the snap
         run: |
-          mv "out/ODAK Air Quality Monitor-linux-x64" out/linux-unpacked
+          mv "out/Mountain Labs-linux-x64" out/linux-unpacked
           VERSION=$(node -p "require('./package.json').version")
           sed -i "s/^version: .*/version: '$VERSION'/" snap/snapcraft.yaml
       - name: Build .snap

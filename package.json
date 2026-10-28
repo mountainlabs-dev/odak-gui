@@ -1,6 +1,6 @@
 {
   "name": "odak-gui",
-  "productName": "ODAK Air Quality Monitor",
+  "productName": "Mountain Labs",
   "version": "0.6.0",
   "description": "Desktop application for ODAK Air Quality Monitoring devices",
   "main": "src/index.js",
@@ -8,6 +8,7 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
+    "make:mas": "electron-forge make --platform=mas --arch=universal --targets @electron-forge/maker-pkg",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\""
   },
@@ -40,6 +41,7 @@
     "@electron-forge/maker-appx": "^7.11.2",
     "@electron-forge/maker-deb": "^7.8.0",
     "@electron-forge/maker-dmg": "^7.8.0",
+    "@electron-forge/maker-pkg": "^7.8.0",
     "@electron-forge/maker-rpm": "^7.8.0",
     "@electron-forge/maker-squirrel": "^7.8.0",
     "@electron-forge/maker-wix": "^7.8.0",

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Mac App Store: the main app. @electron/osx-sign adds the team and application-group ids
+     from the provisioning profile. -->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.app-sandbox</key>
+  <true/>
+  <!-- Talk to Odak over USB serial (/dev/cu.usbmodem*) -->
+  <key>com.apple.security.device.serial</key>
+  <true/>
+  <key>com.apple.security.device.usb</key>
+  <true/>
+  <!-- Firmware list and downloads from GitHub -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <!-- Save logs, history and backups; import files; write firmware to the chosen RPI-RP2 drive -->
+  <key>com.apple.security.files.user-selected.read-write</key>
+  <true/>
+</dict>
+</plist>

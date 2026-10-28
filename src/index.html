@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:">
-  <title>ODAK Air Quality Monitor</title>
+  <title>Mountain Labs</title>
   <!-- Everything the window needs ships with the app, so it works offline and contacts no other servers -->
   <link href="../node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="../node_modules/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -23,7 +23,8 @@
       <div class="row align-items-center">
         <div class="col-auto d-flex align-items-center">
           <img src="../assets/icons/odak.png" alt="ODAK Logo" class="me-2" style="height: 32px; width: auto;">
-          <h4 class="m-0 fw-bold">ODAK Air Quality Monitor</h4>
+          <h4 class="m-0 fw-bold">Mountain Labs</h4>
+          <span class="ms-2 text-muted small">Odak Air Quality Monitor</span>
         </div>
         <div class="col text-end">
           <div id="connection-status" class="d-inline-block me-3">
@@ -848,7 +849,16 @@
 
                 <script>
                   // macOS asks for Full Disk Access before the app can write to the RPI-RP2 drive
-                  if (navigator.userAgent.includes('Macintosh') || navigator.platform === 'MacIntel') {
+                  // (not the App Store build: there the user picks the drive during the update)
+                  const isMasBuild = !!(window.odakPlatform && window.odakPlatform.mas);
+                  if (isMasBuild) {
+                    document.write(`
+                      <div class="alert alert-info d-flex align-items-center mt-3 mb-0">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <div>During the update the app asks you to choose the <b>RPI-RP2</b> drive. Select it and click <b>Install Firmware</b>.</div>
+                      </div>
+                    `);
+                  } else if (navigator.userAgent.includes('Macintosh') || navigator.platform === 'MacIntel') {
                     document.write(`
                       <div class="alert alert-warning d-flex align-items-center mt-3 mb-0">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>

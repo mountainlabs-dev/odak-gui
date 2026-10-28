@@ -6,11 +6,19 @@ const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const { spawn } = require('child_process');
 const { flashLinux } = require('./linux-flash');
+const { flashMac } = require('./mac-flash');
 const firmwareUpdates = require('./firmware-updates');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (require('electron-squirrel-startup')) {
   app.quit();
+}
+
+// Up to 0.6 the app was called "ODAK Air Quality Monitor" and kept its data (history cache,
+// firmware downloads, settings) in a folder of that name; keep using it so nothing is lost
+const legacyUserData = path.join(app.getPath('appData'), 'ODAK Air Quality Monitor');
+if (fs.existsSync(legacyUserData)) {
+  app.setPath('userData', legacyUserData);
 }
 
 // Linux (e.g. Pardus/Debian GNOME): Electron 36 can load GTK 4 alongside GTK 3
@@ -93,7 +101,7 @@ function showAboutWindow() {
     maximizable: false,
     parent: mainWindow,
     modal: process.platform !== 'darwin',
-    title: 'About ODAK Air Quality Monitor',
+    title: 'About Mountain Labs',
     icon: path.join(__dirname, '../assets/icons', 'odak.png'),
     webPreferences: {
       contextIsolation: true,
@@ -125,7 +133,7 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'About ODAK Air Quality Monitor',
+          label: 'About Mountain Labs',
           click: showAboutWindow,
         },
       ],
@@ -418,6 +426,28 @@ ipcMain.handle('update-firmware', async (event, options) => {
       } catch (error) {
         const message = error.code === 'permission' ? linuxSerialPermissionMessage(comPort) : error.message;
         return { success: false, error: message };
+      }
+    } else if (process.mas) {
+      // Mac App Store: sandboxed, so no scripts; the user picks the RPI-RP2 drive to allow the copy
+      try {
+        await flashMac({
+          portPath: comPort,
+          firmwarePath: options.firmwarePath,
+          progress: (message) => mainWindow.webContents.send('firmware-progress', { message }),
+          chooseDrive: async (defaultPath) => {
+            const result = await dialog.showOpenDialog(mainWindow, {
+              title: 'Choose the RPI-RP2 drive',
+              message: 'Odak is in update mode. Choose the RPI-RP2 drive to install the firmware.',
+              buttonLabel: 'Install Firmware',
+              defaultPath,
+              properties: ['openDirectory'],
+            });
+            return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
+          },
+        });
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
       }
     } else if (process.platform === 'darwin') {
       // macOS: Use the flash.sh script from the scripts folder, extracted to temp if in ASAR

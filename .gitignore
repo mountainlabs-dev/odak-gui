@@ -97,3 +97,6 @@ out/
 parts/
 stage/
 prime/
+
+# Mac App Store provisioning profiles (download from developer.apple.com)
+*.provisionprofile

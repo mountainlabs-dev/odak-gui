@@ -2,7 +2,7 @@
 #
 # The app is built by Electron Forge first; CI then runs snapcraft on the result:
 #   npx electron-forge package
-#   mv "out/ODAK Air Quality Monitor-linux-x64" out/linux-unpacked
+#   mv "out/Mountain Labs-linux-x64" out/linux-unpacked
 #   snapcraft pack
 # (see .github/workflows/release.yml, which also sets `version` from package.json)
 name: odak-gui

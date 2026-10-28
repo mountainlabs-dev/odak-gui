@@ -4,7 +4,7 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
-const { version, description } = require('./package.json');
+const { version, description, productName } = require('./package.json');
 
 // Microsoft Store identity: copy these from Partner Center (Product management > Product identity).
 // The defaults build a package you can sideload for testing; the Store rejects them.
@@ -27,12 +27,58 @@ function storeManifest() {
   return out;
 }
 
+// Mac App Store build: `npm run make:mas` (electron-forge ... --platform=mas). See docs/PUBLISHING.md.
+const platformArg = process.argv.findIndex((a) => a === '--platform' || a.startsWith('--platform='));
+const isMas = platformArg >= 0 &&
+  (process.argv[platformArg].split('=')[1] || process.argv[platformArg + 1]) === 'mas';
+
+// Copy these from App Store Connect / developer.apple.com
+const macStore = {
+  bundleId: process.env.MAS_BUNDLE_ID || 'io.mountainlabs.app',
+  teamId: process.env.MAS_TEAM_ID,
+  // Mac App Store distribution profile for the bundle id (Certificates, IDs & Profiles > Profiles)
+  provisioningProfile: process.env.MAS_PROVISIONING_PROFILE || path.join(__dirname, 'packaging/macos/embedded.provisionprofile'),
+  // Defaults: osx-sign finds the "Apple Distribution" / "3rd Party Mac Developer Installer" certificates
+  appIdentity: process.env.MAS_APP_IDENTITY || undefined,
+  installerIdentity: process.env.MAS_INSTALLER_IDENTITY || undefined,
+  // Must go up with every upload to App Store Connect
+  buildVersion: process.env.MAS_BUILD_NUMBER || version,
+};
+
+if (isMas) {
+  if (!fs.existsSync(macStore.provisioningProfile)) {
+    throw new Error(`Mac App Store provisioning profile not found at ${macStore.provisioningProfile} (set MAS_PROVISIONING_PROFILE).`);
+  }
+}
+
+const masPackagerConfig = isMas ? {
+  appCategoryType: 'public.app-category.utilities',
+  buildVersion: macStore.buildVersion,
+  extendInfo: {
+    // Without it, osx-sign reads the team from the provisioning profile
+    ...(macStore.teamId && { ElectronTeamID: macStore.teamId }),
+    // Only HTTPS (exempt), so App Store Connect doesn't ask about export compliance on each build
+    ITSAppUsesNonExemptEncryption: false,
+  },
+  osxSign: {
+    identity: macStore.appIdentity,
+    provisioningProfile: macStore.provisioningProfile,
+    // The app gets the sandbox entitlements; helpers, frameworks and native modules inherit them
+    optionsForFile: (filePath) => ({
+      entitlements: filePath.endsWith(`${productName}.app`)
+        ? path.join(__dirname, 'packaging/macos/entitlements.mas.plist')
+        : path.join(__dirname, 'packaging/macos/entitlements.mas.child.plist'),
+    }),
+  },
+} : {};
+
 module.exports = {
   packagerConfig: {
     asar: true,
     icon: './assets/icons/odak', // Point to the base filename without extension
     executableName: 'odak-gui', // Avoid spaces in the Linux binary name
-    appBundleId: 'io.mountainlabs.odak-gui',
+    appBundleId: macStore.bundleId,
+    ...masPackagerConfig,
     // Keep files the desktop app doesn't use out of the package
     ignore: [
       /^\/web(\/|$)/,
@@ -58,8 +104,9 @@ module.exports = {
     // Packaging edits Info.plist and resources after Electron's own ad-hoc signature, and the fuses
     // plugin re-signs only the main binary, so the bundle seal is broken and macOS says the
     // downloaded app "is damaged". Without an Apple Developer ID, re-sign the whole bundle ad hoc.
+    // (The Mac App Store build is signed properly by osxSign above.)
     postPackage: async (_config, { platform, outputPaths }) => {
-      if (platform !== 'darwin' && platform !== 'mas') return;
+      if (platform !== 'darwin') return;
       for (const dir of outputPaths) {
         for (const app of fs.readdirSync(dir).filter((f) => f.endsWith('.app'))) {
           const appPath = path.join(dir, app);
@@ -90,7 +137,7 @@ module.exports = {
         options: {
           name: 'odak-gui',
           bin: 'odak-gui',
-          productName: 'ODAK Air Quality Monitor',
+          productName: 'Mountain Labs',
           genericName: 'Air Quality Monitor',
           icon: './assets/icons/odak.png',
           categories: ['Utility', 'Science'],
@@ -130,7 +177,15 @@ module.exports = {
       config: {
         icon: './assets/icons/odak.icns'
       }
-    }
+    },
+    {
+      // Mac App Store installer package, uploaded with Transporter (see docs/PUBLISHING.md)
+      name: '@electron-forge/maker-pkg',
+      platforms: ['mas'],
+      config: {
+        identity: macStore.installerIdentity,
+      },
+    },
   ],
   plugins: [
     {

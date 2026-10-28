@@ -1428,7 +1428,7 @@ document.addEventListener('DOMContentLoaded', () => {
       format: 'odak-backup',
       version: 1,
       exportedAt: new Date().toISOString(),
-      app: `ODAK Air Quality Monitor ${infoFirmware.textContent && infoFirmware.textContent.startsWith('v') ? `(firmware ${infoFirmware.textContent})` : ''}`.trim(),
+      app: `Mountain Labs ${infoFirmware.textContent && infoFirmware.textContent.startsWith('v') ? `(firmware ${infoFirmware.textContent})` : ''}`.trim(),
       plan: { schedule: getSchedule(), priorities: getPriorities() },
       columns: historyCache.columns,
       rows: historyCache.rows,

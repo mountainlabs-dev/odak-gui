@@ -139,4 +139,4 @@ async function flashLinux({ portPath, firmwarePath, progress, roots = mediaRoots
   progress('Flash successful');
 }
 
-module.exports = { flashLinux, findBootloaderDrive, FlashError };
+module.exports = { flashLinux, findBootloaderDrive, resetToBootloader, FlashError };
