@@ -105,10 +105,20 @@ module.exports = {
     ignoreModules: ['@serialport/bindings-cpp'],
   },
   hooks: {
-    // Electron's Mac App Store download comes signed per architecture, so its _CodeSignature files
-    // differ between the x64 and arm64 halves and the universal merge refuses them. osxSign signs
-    // everything again with our certificate, so drop the old signatures right after extracting.
     packageAfterExtract: async (_config, buildPath, _electronVersion, platform) => {
+      if (platform !== 'darwin' && platform !== 'mas') return;
+      // The app's (empty) language folders are what macOS and the App Store list as its languages.
+      // Electron brings 55; keep the ones the interface is translated into (src/locales).
+      // Chromium's own strings live in the framework's .lproj folders and are left alone.
+      const resources = path.join(buildPath, 'Electron.app', 'Contents', 'Resources');
+      for (const dir of fs.readdirSync(resources)) {
+        if (dir.endsWith('.lproj') && !['en.lproj', 'tr.lproj'].includes(dir)) {
+          fs.rmSync(path.join(resources, dir), { recursive: true });
+        }
+      }
+      // Electron's Mac App Store download comes signed per architecture, so its _CodeSignature files
+      // differ between the x64 and arm64 halves and the universal merge refuses them. osxSign signs
+      // everything again with our certificate, so drop the old signatures right after extracting.
       if (platform !== 'mas') return;
       const strip = (dir) => {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

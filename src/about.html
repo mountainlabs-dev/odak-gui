@@ -72,33 +72,33 @@
       <img src="../assets/icons/odak.png" alt="">
       <div>
         <h1>Mountain Labs</h1>
-        <div class="version">Version <span id="version">--</span></div>
+        <div class="version"><span data-tr="Sürüm">Version</span> <span id="version">--</span></div>
       </div>
     </div>
 
-    <p>
+    <p data-tr="Odak Temiz Hava Asistanı için masaüstü uygulaması: canlı sensör ölçümlerini izleyin, veri kaydedin, sensörleri kalibre edin, cihaz saatini kurun ve yazılımı güncelleyin.">
       Desktop companion for the Odak Clean Air Assistant: watch live sensor readings,
       log data, calibrate the sensors, set the device clock and update the firmware.
     </p>
 
-    <h2>About Mountain Labs</h2>
-    <p>
+    <h2 data-tr="Mountain Labs Hakkında">About Mountain Labs</h2>
+    <p data-tr-html="Mountain Labs, e-mürekkep ekranlı ahşap bir hava kalitesi monitörü olan &lt;b&gt;Odak Temiz Hava Asistanı&lt;/b&gt;'nı tasarlar ve üretir. Odak; evde daha temiz hava solumanıza yardımcı olmak için CO&lt;sub&gt;2&lt;/sub&gt;, PM2.5 ve VOC ölçer.">
       Mountain Labs designs and builds the <b>Odak Clean Air Assistant</b>, a wooden
       air quality monitor with an e-ink display. Odak measures CO<sub>2</sub>, PM2.5
       and VOCs to help you breathe cleaner air at home.
     </p>
 
-    <h2>Links</h2>
+    <h2 data-tr="Bağlantılar">Links</h2>
     <ul class="links">
-      <li><span>Website</span><a href="https://mountainlabs.io" target="_blank">mountainlabs.io</a></li>
-      <li><span>Source</span><a href="https://github.com/mountainlabs-dev/odak-gui" target="_blank">github.com/mountainlabs-dev/odak-gui</a></li>
+      <li><span data-tr="Web sitesi">Website</span><a href="https://mountainlabs.io" target="_blank">mountainlabs.io</a></li>
+      <li><span data-tr="Kaynak kodu">Source</span><a href="https://github.com/mountainlabs-dev/odak-gui" target="_blank">github.com/mountainlabs-dev/odak-gui</a></li>
       <li><span>LinkedIn</span><a href="https://www.linkedin.com/company/mountainlabs-as" target="_blank">mountainlabs-as</a></li>
       <li><span>Instagram</span><a href="https://www.instagram.com/inmountainlabs/" target="_blank">@inmountainlabs</a></li>
       <li><span>X</span><a href="https://x.com/mountainlabs" target="_blank">@mountainlabs</a></li>
     </ul>
 
     <footer>
-      © <span id="year"></span> Mountain Labs · Released under the MIT License
+      © <span id="year"></span> Mountain Labs · <span data-tr="MIT Lisansı ile yayımlanmıştır">Released under the MIT License</span>
     </footer>
   </main>
 
@@ -107,6 +107,13 @@
     const params = new URLSearchParams(window.location.search);
     document.getElementById('version').textContent = params.get('version') || '--';
     document.getElementById('year').textContent = new Date().getFullYear();
+    // ...and the interface language; the Turkish text sits on each element
+    if (params.get('lang') === 'tr') {
+      document.documentElement.lang = 'tr';
+      document.title = 'Mountain Labs Hakkında';
+      for (const el of document.querySelectorAll('[data-tr]')) el.textContent = el.dataset.tr;
+      for (const el of document.querySelectorAll('[data-tr-html]')) el.innerHTML = el.dataset.trHtml;
+    }
   </script>
 </body>
 </html>

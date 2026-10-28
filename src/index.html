@@ -27,6 +27,10 @@
           <span class="ms-2 text-muted small">Odak Air Quality Monitor</span>
         </div>
         <div class="col text-end">
+          <select id="lang-select" class="form-select form-select-sm d-inline-block w-auto me-3 align-middle" aria-label="Language">
+            <option value="en">English</option>
+            <option value="tr">Türkçe</option>
+          </select>
           <div id="connection-status" class="d-inline-block me-3">
             <span class="badge disconnected"><i class="bi bi-broadcast me-1"></i> Disconnected</span>
           </div>
@@ -431,7 +435,7 @@
             <div class="card">
               <div class="card-header"><i class="bi bi-calendar-week me-1"></i> Your day</div>
               <div class="card-body">
-                <p class="text-muted small mb-3">
+                <p class="text-muted small mb-3" data-i18n-html>
                   Tell Odak when you wake up, focus, rest and sleep. Each part starts at its time and lasts until the next one,
                   so sleep can run past midnight. Odak rates the air for each part of your day on its <b>My day</b> screens,
                   and the <b>Insights</b> tab uses the same schedule.
@@ -821,9 +825,9 @@
                   <h6 class="fw-semibold mb-2"><i class="bi bi-question-circle me-1"></i> Which Odak do you have?</h6>
                   <p class="small mb-2" id="fw-unknown-why">The app could not read the firmware version from your Odak.</p>
                   <ol class="small mb-3">
-                    <li>Press and hold the <b>right-side button</b> on Odak for <b>5 seconds</b>, then let go. Odak restarts.</li>
-                    <li>Watch the start-up screen: the version is in the <b>top-right corner</b>, for example <span class="fw-code">v2.9</span>.</li>
-                    <li>Choose the board that matches the first number:</li>
+                    <li data-i18n-html>Press and hold the <b>right-side button</b> on Odak for <b>5 seconds</b>, then let go. Odak restarts.</li>
+                    <li data-i18n-html>After you finish setup, watch the start-up screen: the version is in the <b>top-right corner</b>, for example <span class="fw-code">v2.9</span>.</li>
+                    <li data-i18n-html>Choose the board that matches the first number:</li>
                   </ol>
                   <div class="d-flex flex-wrap gap-2 align-items-center">
                     <select id="fw-board-select" class="form-select" style="max-width: 22rem;">
@@ -855,14 +859,14 @@
                     document.write(`
                       <div class="alert alert-info d-flex align-items-center mt-3 mb-0">
                         <i class="bi bi-info-circle-fill me-2"></i>
-                        <div>During the update the app asks you to choose the <b>RPI-RP2</b> drive. Select it and click <b>Install Firmware</b>.</div>
+                        <div data-i18n-html>During the update the app asks you to choose the <b>RPI-RP2</b> drive. Select it and click <b>Install Firmware</b>.</div>
                       </div>
                     `);
                   } else if (navigator.userAgent.includes('Macintosh') || navigator.platform === 'MacIntel') {
                     document.write(`
                       <div class="alert alert-warning d-flex align-items-center mt-3 mb-0">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <div>
+                        <div data-i18n-html>
                           <strong>macOS Full Disk Access Required (if not given):</strong><br>
                           To update firmware, you must grant Full Disk Access to this app.<br>
                           <ol class="mb-0 mt-1">

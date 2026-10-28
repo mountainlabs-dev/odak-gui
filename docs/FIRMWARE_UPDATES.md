@@ -35,7 +35,8 @@ Format:
       "date": "2026-10-24",
       "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v2-2.9.5/odak-v2-2.9.5.uf2",
       "sha256": "…64 hex characters…",
-      "notes": "Air Coach action cards\nMeasurements no longer stop until a button press"
+      "notes": "Air Coach action cards\nMeasurements no longer stop until a button press",
+      "notes_tr": "Hava Koçu öneri kartları\nÖlçümler artık bir düğmeye basılana kadar durmaz"
     },
     "v1": { "…": "same fields" }
   }
@@ -45,7 +46,8 @@ Format:
 Rules the app enforces:
 - `url` must be `https://` (plain `http://` only for `127.0.0.1` while testing).
 - The download must match `sha256` and be a valid UF2 image, or nothing is flashed.
-- `notes` is shown to the user as plain text (new lines kept).
+- `notes` is shown to the user as plain text (new lines kept). `notes_tr` (optional) is shown
+  instead when the app is in Turkish.
 
 ## Publishing a firmware
 

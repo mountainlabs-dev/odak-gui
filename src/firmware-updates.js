@@ -4,7 +4,7 @@
 //   {
 //     "boards": {
 //       "v1": { "name": "Original board", "version": "1.7", "url": "https://.../odak-v1.7.uf2",
-//               "sha256": "<hex>", "notes": "What changed", "date": "2026-10-24" },
+//               "sha256": "<hex>", "notes": "What changed", "notes_tr": "Neler değişti", "date": "2026-10-24" },
 //       "v2": { ... }
 //     }
 //   }
@@ -59,6 +59,7 @@ async function getManifest() {
       url: String(entry.url),
       sha256: String(entry.sha256).toLowerCase(),
       notes: String(entry.notes || ''),
+      notesTr: String(entry.notes_tr || ''),  // shown when the app is in Turkish
       date: String(entry.date || ''),
     };
   }

@@ -19,6 +19,11 @@ const chartData = {
 // Import modules
 import { initCharts, addDataPoint, updateCharts, clearCharts } from './modules/chart-management.js';
 import { InsightsView, PHASES, samplesFromHistory, parseImportFile, parseCareLog, mergeCareLog } from './modules/insights.js';
+import { t, lang, locale, saveLanguage, translatePage } from './i18n.js';
+
+// Static text first, before anything below writes translated text into the page
+translatePage();
+window.api.setLanguage(lang);
 
 // Daily schedule: profiles and parts of the day, in the firmware's order
 const SCHEDULE_PROFILES = ['weekday', 'weekend'];
@@ -126,6 +131,18 @@ document.addEventListener('DOMContentLoaded', () => {
   setupApiCommunication();
   
   function setupEventListeners() {
+    // Interface language: reload in the new language (after closing the port, which the reload would leave open)
+    const langSelect = byId('lang-select');
+    langSelect.value = lang;
+    langSelect.addEventListener('change', async () => {
+      saveLanguage(langSelect.value);
+      if (isConnected) {
+        expectingClose = true;
+        await window.api.disconnectPort();
+      }
+      window.location.reload();
+    });
+    
     // Port selection and connection
     connectBtn.addEventListener('click', () => connectToPort());
     disconnectBtn.addEventListener('click', disconnectPort);
@@ -220,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     byId('sched-copy-btn').addEventListener('click', () => {
       SCHEDULE_PHASES.forEach((_, i) => { byId(`sched-weekend-${i}`).value = byId(`sched-weekday-${i}`).value; });
       renderScheduleVisuals();
-      setScheduleStatus('Weekend times copied from weekdays. Click "Save to device" to keep them.');
+      setScheduleStatus(t('Weekend times copied from weekdays. Click "Save to device" to keep them.'));
     });
     
     // Insights
@@ -233,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const c of priorityChecks()) {
       c.addEventListener('change', () => {
         updatePriorityPicker();
-        setPriorityStatus(isConnected ? 'Click "Save to device" to keep this choice.' : 'Used in Insights. Connect to save it on the device.');
+        setPriorityStatus(isConnected ? t('Click "Save to device" to keep this choice.') : t('Used in Insights. Connect to save it on the device.'));
         insightsView.render();
       });
     }
@@ -330,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (ports.length === 0) {
       const option = document.createElement('option');
-      option.text = 'No ports available';
+      option.text = t('No ports available');
       option.disabled = true;
       portSelect.add(option);
       connectBtn.disabled = true;
@@ -370,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await window.api.refreshPorts();
     } catch (error) {
-      displayError({ message: 'Failed to refresh ports', details: error.message });
+      displayError({ message: t('Failed to refresh ports'), details: error.message });
     }
   }
   
@@ -398,12 +415,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (auto) {
         // Expected while the device is still enumerating; keep waiting quietly
-        addToCliOutput(`Reconnect attempt failed: ${result.error}`, 'cli-debug');
+        addToCliOutput(t('Reconnect attempt failed: {error}', { error: result.error }), 'cli-debug');
       } else {
-        displayError({ message: 'Failed to connect', details: result.error });
+        displayError({ message: t('Failed to connect'), details: result.error });
       }
     } catch (error) {
-      displayError({ message: 'Connection error', details: error.message });
+      displayError({ message: t('Connection error'), details: error.message });
     }
     // Reset buttons if connection failed (Disconnect cancels a pending reconnect)
     connectBtn.disabled = reconnectWanted;
@@ -423,9 +440,9 @@ document.addEventListener('DOMContentLoaded', () => {
     downloadHistoryBtn.disabled = false;
     insSyncBtn.disabled = false;
     byId('prio-save-btn').disabled = false;
-    connectionStatus.innerHTML = `<span class="badge connected"><i class="bi bi-link me-1"></i> Connected to ${path}</span>`;
+    connectionStatus.innerHTML = `<span class="badge connected"><i class="bi bi-link me-1"></i> ${t('Connected to {path}', { path })}</span>`;
     updateFirmwareBtn.disabled = !selectedFirmwarePath;
-    addToCliOutput(`Connected to ${path}`, 'cli-command');
+    addToCliOutput(t('Connected to {path}', { path }), 'cli-command');
     runConnectTasks(connectionSeq);
   }
   
@@ -434,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isConnected && reconnectWanted) {
       stopReconnectWait();
       showDisconnected();
-      addToCliOutput('Stopped waiting for the device', 'cli-command');
+      addToCliOutput(t('Stopped waiting for the device'), 'cli-command');
       return;
     }
     
@@ -452,27 +469,27 @@ document.addEventListener('DOMContentLoaded', () => {
         expectingClose = false;
         connectionSeq++;
         cancelLineWaiters();
-        finishHistoryDump('Disconnected during the download.');
+        finishHistoryDump(t('Disconnected during the download.'));
         showDisconnected();
-        addToCliOutput('Disconnected from device', 'cli-command');
+        addToCliOutput(t('Disconnected from device'), 'cli-command');
       } else {
         expectingClose = false;
         // Reset buttons if disconnection failed
         connectBtn.disabled = isConnected;
         disconnectBtn.disabled = !isConnected;
-        displayError({ message: 'Failed to disconnect', details: result.error });
+        displayError({ message: t('Failed to disconnect'), details: result.error });
       }
     } catch (error) {
       expectingClose = false;
       // Reset buttons on error
       connectBtn.disabled = isConnected;
       disconnectBtn.disabled = !isConnected;
-      displayError({ message: 'Disconnect error', details: error.message });
+      displayError({ message: t('Disconnect error'), details: error.message });
     }
   }
   
   function showDisconnected() {
-    connectionStatus.innerHTML = '<span class="badge disconnected"><i class="bi bi-broadcast me-1"></i> Disconnected</span>';
+    connectionStatus.innerHTML = `<span class="badge disconnected"><i class="bi bi-broadcast me-1"></i> ${t('Disconnected')}</span>`;
     connectBtn.disabled = false;
     disconnectBtn.disabled = true;
     setTimeBtn.disabled = true;
@@ -499,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
     isConnected = false;
     connectionSeq++;
     cancelLineWaiters();
-    finishHistoryDump('The device disconnected during the download.');
+    finishHistoryDump(t('The device disconnected during the download.'));
     
     if (expectingClose) {
       expectingClose = false;
@@ -510,13 +527,13 @@ document.addEventListener('DOMContentLoaded', () => {
     showDisconnected();
     if (firmwareUpdating) {
       // The flash script closed the port; we reconnect once the update is done
-      connectionStatus.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-arrow-up-circle me-1"></i> Updating firmware…</span>';
+      connectionStatus.innerHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-arrow-up-circle me-1"></i> ${t('Updating firmware…')}</span>`;
       connectBtn.disabled = true;
       return;
     }
     
     // Lost without the user asking (unplug, SYS_RST): reconnect when it comes back
-    addToCliOutput('Device disconnected — will reconnect when it comes back', 'cli-command');
+    addToCliOutput(t('Device disconnected — will reconnect when it comes back'), 'cli-command');
     startReconnectWait();
   }
   
@@ -524,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function startReconnectWait() {
     if (!lastConnectedPort) return;
     reconnectWanted = true;
-    connectionStatus.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Device restarting / unplugged — waiting…</span>';
+    connectionStatus.innerHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> ${t('Device restarting / unplugged — waiting…')}</span>`;
     connectBtn.disabled = true;
     disconnectBtn.disabled = false;  // acts as "stop waiting"
     // Poll ports faster than the regular 5 s refresh while we wait
@@ -606,11 +623,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   async function runConnectTasks(seq) {
-    infoFirmware.textContent = 'checking…';
+    infoFirmware.textContent = t('checking…');
     setDeviceFirmware(null, 'checking');
     if (!(await waitForDeviceReady(seq))) {
       if (seq === connectionSeq) {
-        infoFirmware.textContent = 'no reply';
+        infoFirmware.textContent = t('no reply');
         setDeviceFirmware(null);
         checkFirmwareAfterConnect(seq);
       }
@@ -618,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const version = await request('$PRINT_VERSION', (l) => /^v\d+\.\d+/.test(l) || l.includes('Unknown command: PRINT_VERSION'), 5000);
     if (seq !== connectionSeq) return;
-    infoFirmware.textContent = version === null ? 'no reply' : version.startsWith('v') ? version : 'older firmware (no version command)';
+    infoFirmware.textContent = version === null ? t('no reply') : version.startsWith('v') ? version : t('older firmware (no version command)');
     setDeviceFirmware(version);
     checkFirmwareAfterConnect(seq);
     
@@ -638,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   function tickClock() {
     const now = new Date();
-    clockNow.textContent = now.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
+    clockNow.textContent = now.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'medium' });
     const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
     clockTz.textContent = `${formatOffset(-now.getTimezoneOffset())} ${tzName}`;
   }
@@ -655,14 +672,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (reply === null) {
       clockDevice.textContent = '';
     } else if (reply.includes('Unknown command')) {
-      clockDevice.innerHTML = '<span class="text-muted">Device clock: not available in this firmware</span>';
+      clockDevice.innerHTML = `<span class="text-muted">${t('Device clock: not available in this firmware')}</span>`;
     } else if (reply.startsWith('Time: not set')) {
-      clockDevice.innerHTML = '<span class="text-warning fw-medium"><i class="bi bi-exclamation-triangle me-1"></i>Device clock is not set</span>';
+      clockDevice.innerHTML = `<span class="text-warning fw-medium"><i class="bi bi-exclamation-triangle me-1"></i>${t('Device clock is not set')}</span>`;
     } else {
       // "Time: 2026-10-15 09:18:18 UTC (local 2026-10-15 12:18:18, offset +180 min)"
       const local = /local ([\d-]+ [\d:]+)/.exec(reply);
       clockDevice.innerHTML = '<span class="text-success fw-medium"><i class="bi bi-check-circle me-1"></i></span>';
-      clockDevice.firstChild.append(`Device clock: ${local ? local[1] : reply.slice(6)}`);
+      clockDevice.firstChild.append(t('Device clock: {time}', { time: local ? local[1] : reply.slice(6) }));
     }
   }
   
@@ -671,9 +688,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeBtn.disabled = true;
     try {
       if (!alreadyReady) {
-        setClockStatus('Waiting for the device to finish what it is doing…');
+        setClockStatus(t('Waiting for the device to finish what it is doing…'));
         if (!(await waitForDeviceReady(seq))) {
-          if (seq === connectionSeq) setClockStatus('The device did not respond.', 'danger');
+          if (seq === connectionSeq) setClockStatus(t('The device did not respond.'), 'danger');
           return;
         }
       }
@@ -688,17 +705,17 @@ document.addEventListener('DOMContentLoaded', () => {
       );
       if (seq !== connectionSeq) return;
       if (reply === null) {
-        setClockStatus('No answer to SET_TIME.', 'danger');
+        setClockStatus(t('No answer to SET_TIME.'), 'danger');
       } else if (reply.includes('Unknown command')) {
-        setClockStatus('This firmware does not support setting the time yet.', 'warning');
+        setClockStatus(t('This firmware does not support setting the time yet.'), 'warning');
       } else if (reply.startsWith('SET_TIME error')) {
-        setClockStatus(`The device rejected the time: ${reply}`, 'danger');
+        setClockStatus(t('The device rejected the time: {reply}', { reply }), 'danger');
       } else {
-        setClockStatus(`Device time set at ${now.toLocaleTimeString()} (${formatOffset(offset)}).`, 'success');
+        setClockStatus(t('Device time set at {time} ({offset}).', { time: now.toLocaleTimeString(locale), offset: formatOffset(offset) }), 'success');
         await refreshDeviceTime(seq);
       }
     } catch (error) {
-      setClockStatus(`Failed: ${error.message}`, 'danger');
+      setClockStatus(t('Failed: {error}', { error: error.message }), 'danger');
     } finally {
       setTimeBtn.disabled = !isConnected;
     }
@@ -739,7 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function formatDuration(minutes) {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return h && m ? `${h} h ${m} min` : h ? `${h} h` : `${m} min`;
+    return h && m ? t('{h} h {m} min', { h, m }) : h ? t('{h} h', { h }) : t('{m} min', { m });
   }
   
   /** Coloured 24-hour bar for a day plan (minutes of wake, focus, rest, sleep). */
@@ -785,11 +802,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       byId(`sched-bar-${profile}`).innerHTML = scheduleBarHtml(minutes);
     }
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => t(d));
     byId('sched-week').innerHTML = days.map((day, i) => {
       const profile = i >= 5 ? 'weekend' : 'weekday';
       return `<div class="sched-week-row ${profile}"><span class="sched-week-day">${day}</span>
-        <div class="sched-bar flex-grow-1">${plans[profile] ? scheduleBarHtml(plans[profile], { ticks: i === 6 }) : '<div class="sched-error small">Fix the times above</div>'}</div></div>`;
+        <div class="sched-bar flex-grow-1">${plans[profile] ? scheduleBarHtml(plans[profile], { ticks: i === 6 }) : `<div class="sched-error small">${t('Fix the times above')}</div>`}</div></div>`;
     }).join('');
     insightsView.render();
   }
@@ -807,15 +824,16 @@ document.addEventListener('DOMContentLoaded', () => {
   function readSchedulePlan(profile) {
     const times = SCHEDULE_PHASES.map((_, i) => byId(`sched-${profile}-${i}`).value);
     const minutes = times.map(toMinutes);
-    const label = profile === 'weekday' ? 'Mon–Fri' : 'Sat–Sun';
+    const label = profile === 'weekday' ? t('Mon–Fri') : t('Sat–Sun');
+    const phaseName = (i) => t(SCHEDULE_PHASES[i]).toLocaleLowerCase(locale);
     const missing = minutes.findIndex(Number.isNaN);
-    if (missing >= 0) return { error: `${label}: enter a ${SCHEDULE_PHASES[missing].toLowerCase()} time.` };
+    if (missing >= 0) return { error: t('{label}: enter a {phase} time.', { label, phase: phaseName(missing) }) };
     // Going around the clock from wake, each part must start after the previous one.
     let prev = 0;
     for (let i = 1; i < 4; i++) {
       const d = (minutes[i] - minutes[0] + 1440) % 1440;
       if (d <= prev) {
-        return { error: `${label}: ${SCHEDULE_PHASES[i].toLowerCase()} must come after ${SCHEDULE_PHASES[i - 1].toLowerCase()} (order: wake, focus, rest, sleep).` };
+        return { error: t('{label}: {phase} must come after {previous} (order: wake, focus, rest, sleep).', { label, phase: phaseName(i), previous: phaseName(i - 1) }) };
       }
       prev = d;
     }
@@ -828,15 +846,15 @@ document.addEventListener('DOMContentLoaded', () => {
     setScheduleButtons(false);
     try {
       if (!alreadyReady) {
-        setScheduleStatus('Waiting for the device to finish what it is doing…');
+        setScheduleStatus(t('Waiting for the device to finish what it is doing…'));
         if (!(await waitForDeviceReady(seq))) {
-          if (seq === connectionSeq) setScheduleStatus('The device did not respond.', 'danger');
+          if (seq === connectionSeq) setScheduleStatus(t('The device did not respond.'), 'danger');
           return;
         }
       }
       await task();
     } catch (err) {
-      setScheduleStatus(`Failed: ${err.message}`, 'danger');
+      setScheduleStatus(t('Failed: {error}', { error: err.message }), 'danger');
     } finally {
       setScheduleButtons(isConnected);
     }
@@ -851,15 +869,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!sent.success) cancelLineWaiters();
       const [weekday, weekend] = await Promise.all(replies);
       if (seq !== connectionSeq) return;
-      if (weekday === null) return setScheduleStatus('No answer to GET_SCHEDULE.', 'danger');
-      if (unknown(weekday)) return setScheduleStatus('This firmware does not support schedules yet.', 'warning');
-      if (notSet(weekday)) return setScheduleStatus('No schedule on the device yet — adjust the times and save.', 'warning');
+      if (weekday === null) return setScheduleStatus(t('No answer to GET_SCHEDULE.'), 'danger');
+      if (unknown(weekday)) return setScheduleStatus(t('This firmware does not support schedules yet.'), 'warning');
+      if (notSet(weekday)) return setScheduleStatus(t('No schedule on the device yet — adjust the times and save.'), 'warning');
       for (const [profile, line] of [['weekday', weekday], ['weekend', weekend]]) {
         const times = line ? line.match(/\d{2}:\d{2}/g) : null;
         if (times && times.length === 4) times.forEach((t, i) => { byId(`sched-${profile}-${i}`).value = t; });
       }
       renderScheduleVisuals();
-      setScheduleStatus('Showing the schedule stored on the device.', 'success');
+      setScheduleStatus(t('Showing the schedule stored on the device.'), 'success');
     });
   }
 
@@ -880,23 +898,23 @@ document.addEventListener('DOMContentLoaded', () => {
           5000,
         );
         if (seq !== connectionSeq) return;
-        if (reply === null) return setScheduleStatus('No answer to SET_SCHEDULE.', 'danger');
-        if (reply.includes('Unknown command')) return setScheduleStatus('This firmware does not support schedules yet.', 'warning');
-        if (reply.startsWith('SET_SCHEDULE error')) return setScheduleStatus(`The device rejected the ${profile} schedule.`, 'danger');
+        if (reply === null) return setScheduleStatus(t('No answer to SET_SCHEDULE.'), 'danger');
+        if (reply.includes('Unknown command')) return setScheduleStatus(t('This firmware does not support schedules yet.'), 'warning');
+        if (reply.startsWith('SET_SCHEDULE error')) return setScheduleStatus(t(profile === 'weekday' ? 'The device rejected the weekday schedule.' : 'The device rejected the weekend schedule.'), 'danger');
       }
-      setScheduleStatus(`Schedule saved at ${new Date().toLocaleTimeString()}.`, 'success');
+      setScheduleStatus(t('Schedule saved at {time}.', { time: new Date().toLocaleTimeString(locale) }), 'success');
     });
   }
 
   async function clearDeviceSchedule() {
-    if (!confirm('Remove the daily schedule from the device? The "My day" screens will be empty until a new one is saved.')) return;
+    if (!confirm(t('Remove the daily schedule from the device? The "My day" screens will be empty until a new one is saved.'))) return;
     const seq = connectionSeq;
     await withDevice(seq, false, async () => {
       const reply = await request('$CLEAR_SCHEDULE', (l) => l.startsWith('Schedule cleared') || l.includes('Unknown command: CLEAR_SCHEDULE'), 5000);
       if (seq !== connectionSeq) return;
-      if (reply === null) setScheduleStatus('No answer to CLEAR_SCHEDULE.', 'danger');
-      else if (reply.includes('Unknown command')) setScheduleStatus('This firmware does not support schedules yet.', 'warning');
-      else setScheduleStatus('Schedule removed from the device.', 'success');
+      if (reply === null) setScheduleStatus(t('No answer to CLEAR_SCHEDULE.'), 'danger');
+      else if (reply.includes('Unknown command')) setScheduleStatus(t('This firmware does not support schedules yet.'), 'warning');
+      else setScheduleStatus(t('Schedule removed from the device.'), 'success');
     });
   }
   
@@ -936,11 +954,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const reply = await request('$GET_PRIORITY', (l) => l.startsWith('Priority:') || l.includes('Unknown command: GET_PRIORITY'), 5000);
     if (seq !== connectionSeq || reply === null) return;
     if (reply.includes('Unknown command')) {
-      setPriorityStatus('This firmware has no Air Coach yet; priorities are only used in Insights.', 'warning');
+      setPriorityStatus(t('This firmware has no Air Coach yet; priorities are only used in Insights.'), 'warning');
       return;
     }
     setPriorities(reply.includes('not set') ? [] : [...reply.matchAll(/(\d) [a-z]+/g)].map(m => Number(m[1])));
-    setPriorityStatus(reply.includes('not set') ? 'No priorities on the device yet.' : 'Showing the priorities stored on the device.', reply.includes('not set') ? 'warning' : 'success');
+    setPriorityStatus(reply.includes('not set') ? t('No priorities on the device yet.') : t('Showing the priorities stored on the device.'), reply.includes('not set') ? 'warning' : 'success');
     insightsView.render();
   }
   
@@ -951,9 +969,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const button = byId('prio-save-btn');
     button.disabled = true;
     try {
-      setPriorityStatus('Waiting for the device to finish what it is doing…');
+      setPriorityStatus(t('Waiting for the device to finish what it is doing…'));
       if (!(await waitForDeviceReady(seq))) {
-        if (seq === connectionSeq) setPriorityStatus('The device did not respond.', 'danger');
+        if (seq === connectionSeq) setPriorityStatus(t('The device did not respond.'), 'danger');
         return;
       }
       const reply = await request(
@@ -962,10 +980,10 @@ document.addEventListener('DOMContentLoaded', () => {
         5000,
       );
       if (seq !== connectionSeq) return;
-      if (reply === null) setPriorityStatus('No answer to SET_PRIORITY.', 'danger');
-      else if (reply.includes('Unknown command')) setPriorityStatus('This firmware has no Air Coach yet.', 'warning');
-      else if (reply.startsWith('SET_PRIORITY error')) setPriorityStatus('The device rejected the priorities.', 'danger');
-      else setPriorityStatus(`Priorities saved at ${new Date().toLocaleTimeString()}.`, 'success');
+      if (reply === null) setPriorityStatus(t('No answer to SET_PRIORITY.'), 'danger');
+      else if (reply.includes('Unknown command')) setPriorityStatus(t('This firmware has no Air Coach yet.'), 'warning');
+      else if (reply.startsWith('SET_PRIORITY error')) setPriorityStatus(t('The device rejected the priorities.'), 'danger');
+      else setPriorityStatus(t('Priorities saved at {time}.', { time: new Date().toLocaleTimeString(locale) }), 'success');
     } finally {
       button.disabled = !isConnected;
     }
@@ -1025,9 +1043,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
       }
       if (line.startsWith('Data log: not available')) {
-        finishHistoryDump('This device has no data log (flash not available).');
+        finishHistoryDump(t('This device has no data log (flash not available).'));
       } else if (line.includes('Unknown command: DATA_DUMP')) {
-        finishHistoryDump('This firmware does not store history yet. Update the firmware first.');
+        finishHistoryDump(t('This firmware does not store history yet. Update the firmware first.'));
       }
       return false;
     }
@@ -1039,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (line.startsWith('DATA_END,')) {
       const sent = parseInt(line.split(',')[1], 10);
       if (sent !== dump.rows.length) {
-        finishHistoryDump(`Download incomplete: received ${dump.rows.length} of ${sent} records.`);
+        finishHistoryDump(t('Download incomplete: received {got} of {sent} records.', { got: dump.rows.length, sent }));
       } else {
         finishHistoryDump(null);
       }
@@ -1099,11 +1117,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     historyDump.watchdog = setInterval(() => {
       if (historyDump && Date.now() - historyDump.lastLineAt > HISTORY_IDLE_TIMEOUT_MS) {
-        finishHistoryDump(historyDump.state === 'waiting' ? 'No answer to DATA_DUMP.' : 'The device stopped sending data.');
+        finishHistoryDump(historyDump.state === 'waiting' ? t('No answer to DATA_DUMP.') : t('The device stopped sending data.'));
       }
     }, 1000);
     const sent = await window.api.sendCommand(fromSeq > 0 ? `$DATA_DUMP,${fromSeq}` : '$DATA_DUMP');
-    if (!sent.success) finishHistoryDump(sent.error || 'Could not send DATA_DUMP.');
+    if (!sent.success) finishHistoryDump(sent.error || t('Could not send DATA_DUMP.'));
     return done;
   }
   
@@ -1121,9 +1139,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const m = line && /#(\d+)\s+(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) UTC/.exec(line);
       return m ? { seq: Number(m[1]), time: Date.UTC(m[2], m[3] - 1, m[4], m[5], m[6], m[7]) / 1000 } : null;
     };
-    if (head === null) return { error: 'No answer to DATA_STATUS.' };
-    if (head.includes('Unknown command')) return { error: 'This firmware does not store history yet. Update the firmware first.' };
-    if (head.startsWith('Data log: not available')) return { error: 'This device has no data log (flash not available).' };
+    if (head === null) return { error: t('No answer to DATA_STATUS.') };
+    if (head.includes('Unknown command')) return { error: t('This firmware does not store history yet. Update the firmware first.') };
+    if (head.startsWith('Data log: not available')) return { error: t('This device has no data log (flash not available).') };
     const count = Number((/Data log: (\d+) records/.exec(head) || [])[1] || 0);
     if (count === 0) {
       cancelLineWaiters();
@@ -1203,8 +1221,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const seq = connectionSeq;
       try {
         ui.progress(0);
-        ui.status('Waiting for the device to finish what it is doing…');
-        if (!(await waitForDeviceReady(seq))) return { error: 'The device did not respond.' };
+        ui.status(t('Waiting for the device to finish what it is doing…'));
+        if (!(await waitForDeviceReady(seq))) return { error: t('The device did not respond.') };
         
         const status = await readDataStatus();
         if (status.error) return status;
@@ -1225,10 +1243,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let added = 0;
         if (status.count > 0 && (!historyCache || from <= status.newest.seq)) {
-          ui.status('Reading stored measurements…');
+          ui.status(t('Reading stored measurements…'));
           const result = await dumpHistory(from, (got, total) => {
             ui.progress(Math.min(99, Math.round((got / total) * 100)));
-            ui.status(`Downloading… ${got} of ${total} records`);
+            ui.status(t('Downloading… {got} of {total} records', { got, total }));
           });
           if (result.error) return { error: result.error };
           added = mergeIntoCache(result.columns, result.rows);
@@ -1246,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyCache) {
           historyCache.syncedAt = Date.now();
           const saved = await window.api.saveHistoryCache(historyCache);
-          if (!saved.success) addToCliOutput(`Could not save the history cache: ${saved.error}`, 'cli-warning');
+          if (!saved.success) addToCliOutput(t('Could not save the history cache: {error}', { error: saved.error }), 'cli-warning');
         }
         lastSyncAt = Date.now();
         showDeviceHistory();
@@ -1275,7 +1293,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       if (!historyCache || historyCache.rows.length === 0) {
-        setHistoryStatus('The device has no stored measurements yet.', 'warning');
+        setHistoryStatus(t('The device has no stored measurements yet.'), 'warning');
         setHistoryProgress(null);
         return;
       }
@@ -1285,16 +1303,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const first = history.records[0];
       const last = history.records[history.records.length - 1];
       const range = first.time_local && last.time_local ? ` (${first.time_local} → ${last.time_local})` : '';
-      setHistoryStatus(`${history.records.length} records${range}. Choose where to save…`);
+      setHistoryStatus(t('{count} records{range}. Choose where to save…', { count: history.records.length, range }));
       
       const saved = await window.api.saveHistory(history);
       if (saved.success) {
-        setHistoryStatus(`Saved ${history.records.length} records${range} to ${saved.filePath}`, 'success');
-        addToCliOutput(`Device history saved to: ${saved.filePath}`, 'cli-info');
+        setHistoryStatus(t('Saved {count} records{range} to {file}', { count: history.records.length, range, file: saved.filePath }), 'success');
+        addToCliOutput(t('Device history saved to: {file}', { file: saved.filePath }), 'cli-info');
       } else if (saved.canceled) {
-        setHistoryStatus(`${history.records.length} records${range} ready, but not saved.`, 'warning');
+        setHistoryStatus(t('{count} records{range} ready, but not saved.', { count: history.records.length, range }), 'warning');
       } else {
-        setHistoryStatus(`Could not save the file: ${saved.error}`, 'danger');
+        setHistoryStatus(t('Could not save the file: {error}', { error: saved.error }), 'danger');
       }
     } finally {
       downloadHistoryBtn.disabled = !isConnected && !historyCache;
@@ -1335,17 +1353,17 @@ document.addEventListener('DOMContentLoaded', () => {
   
   function describeData(samples, care, source) {
     if (samples.length === 0) return source;
-    const day = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    const coach = care.length ? ` · ${care.length} coach suggestions` : '';
-    return `${source} · ${samples.length.toLocaleString()} measurements${coach} · ${day(samples[0].t)} – ${day(samples[samples.length - 1].t)}`;
+    const day = (ms) => new Date(ms).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+    const coach = care.length ? ` · ${t('{count} coach suggestions', { count: care.length })}` : '';
+    return `${source} · ${t('{count} measurements', { count: samples.length.toLocaleString(locale) })}${coach} · ${day(samples[0].t)} – ${day(samples[samples.length - 1].t)}`;
   }
   
   function showDeviceHistory() {
     insightsSource = 'device';
     const samples = historyCache ? samplesFromHistory(historyCache.columns, historyCache.rows) : [];
     const care = historyCache?.care || [];
-    const synced = historyCache?.syncedAt ? `synced ${new Date(historyCache.syncedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}` : '';
-    byId('ins-data-info').textContent = samples.length ? describeData(samples, care, `Device data${synced ? `, ${synced}` : ''}`) : '';
+    const synced = historyCache?.syncedAt ? t('synced {time}', { time: new Date(historyCache.syncedAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }) }) : '';
+    byId('ins-data-info').textContent = samples.length ? describeData(samples, care, `${t('Device data')}${synced ? `, ${synced}` : ''}`) : '';
     insightsView.setData(samples, care);
     downloadHistoryBtn.disabled = !isConnected && !historyCache;
     byId('ins-export-btn').disabled = !historyCache;
@@ -1361,9 +1379,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         setInsightsProgress(null);
         const parts = [];
-        if (result.added > 0) parts.push(`${result.added.toLocaleString()} new measurements`);
-        if (result.careAdded > 0) parts.push(`${result.careAdded} coach updates`);
-        setInsightsStatus(parts.length ? `Downloaded ${parts.join(' and ')}.` : 'Up to date.', 'success');
+        if (result.added > 0) parts.push(t('{count} new measurements', { count: result.added.toLocaleString(locale) }));
+        if (result.careAdded > 0) parts.push(t('{count} coach updates', { count: result.careAdded }));
+        setInsightsStatus(parts.length ? t('Downloaded {what}.', { what: parts.join(t(' and ')) }) : t('Up to date.'), 'success');
       }
     } finally {
       insSyncBtn.disabled = !isConnected;
@@ -1376,24 +1394,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = parseImportFile(text, fileName);
       const samples = samplesFromHistory(data.columns, data.rows);
       if (samples.length === 0) {
-        setInsightsStatus('No measurements found in that file.', 'warning');
+        setInsightsStatus(t('No measurements found in that file.'), 'warning');
         return;
       }
       // A backup carries its owner's plan; use it while no device is connected
       if (data.plan && !isConnected) applyPlan(data.plan);
       insightsSource = fileName;
-      byId('ins-data-info').textContent = describeData(samples, data.care, `Imported ${fileName}`);
-      setInsightsStatus(`Showing ${fileName}${data.plan && !isConnected ? ' with its plan' : ''}. Click "Sync from device" to go back to your device's data.`);
+      byId('ins-data-info').textContent = describeData(samples, data.care, t('Imported {file}', { file: fileName }));
+      setInsightsStatus(t(data.plan && !isConnected
+        ? 'Showing {file} with its plan. Click "Sync from device" to go back to your device\'s data.'
+        : 'Showing {file}. Click "Sync from device" to go back to your device\'s data.', { file: fileName }));
       insightsView.setData(samples, data.care);
     } catch (error) {
-      setInsightsStatus(`Could not read the file: ${error.message}`, 'danger');
+      setInsightsStatus(t('Could not read the file: {error}', { error: error.message }), 'danger');
     }
   }
   
   async function openHistoryFile() {
     const result = await window.api.openHistoryFile();
     if (!result.success) {
-      if (!result.canceled) setInsightsStatus(`Could not open the file: ${result.error}`, 'danger');
+      if (!result.canceled) setInsightsStatus(t('Could not open the file: {error}', { error: result.error }), 'danger');
       return;
     }
     importText(result.content, result.filePath.split(/[\\/]/).pop());
@@ -1414,7 +1434,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const file = e.dataTransfer.files[0];
       if (!file) return;
       if (!/\.(csv|json)$/i.test(file.name)) {
-        setInsightsStatus('Drop an Odak backup (.json) or a history file (.csv / .json).', 'warning');
+        setInsightsStatus(t('Drop an Odak backup (.json) or a history file (.csv / .json).'), 'warning');
         return;
       }
       importText(await file.text(), file.name);
@@ -1435,14 +1455,14 @@ document.addEventListener('DOMContentLoaded', () => {
       care: historyCache.care || [],
     };
     const result = await window.api.saveBackup(backup);
-    if (result.success) setInsightsStatus(`Backup saved to ${result.filePath}`, 'success');
-    else if (!result.canceled) setInsightsStatus(`Could not save the backup: ${result.error}`, 'danger');
+    if (result.success) setInsightsStatus(t('Backup saved to {file}', { file: result.filePath }), 'success');
+    else if (!result.canceled) setInsightsStatus(t('Could not save the backup: {error}', { error: result.error }), 'danger');
   }
   
   // CLI Interface Functions
   async function sendCommand() {
     if (!isConnected) {
-      displayError({ message: 'Not connected to device' });
+      displayError({ message: t('Not connected to device') });
       return;
     }
     
@@ -1462,18 +1482,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await window.api.sendCommand(formattedCommand);
       
       if (!result.success) {
-        addToCliOutput(`Error: ${result.error}`, 'cli-error');
+        addToCliOutput(t('Error: {message}', { message: result.error }), 'cli-error');
       }
       
       // The device restarts after SYS_RST; auto-reconnect brings it back
       if (result.success && (result.isSystemReset || command.toUpperCase().includes('SYS_RST'))) {
-        addToCliOutput('System reset sent. Reconnecting automatically when the device is back...', 'cli-info');
+        addToCliOutput(t('System reset sent. Reconnecting automatically when the device is back...'), 'cli-info');
       }
       
       // Clear input
       cliInput.value = '';
     } catch (error) {
-      displayError({ message: 'Command error', details: error.message });
+      displayError({ message: t('Command error'), details: error.message });
     }
   }
   
@@ -1559,7 +1579,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // The main process writes the line to the log file; count it here
     if (loggingToggle.checked && logFilePath.textContent) {
       loggedLines++;
-      logCount.textContent = `${loggedLines} line${loggedLines === 1 ? '' : 's'} recorded`;
+      logCount.textContent = t(loggedLines === 1 ? '1 line recorded' : '{count} lines recorded', { count: loggedLines });
     }
     
     // Try to parse as JSON
@@ -1615,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logCount.textContent = '';
       }
     } catch (error) {
-      displayError({ message: 'File selection error', details: error.message });
+      displayError({ message: t('File selection error'), details: error.message });
     }
   }
   
@@ -1634,11 +1654,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await window.api.toggleLogging(isEnabled);
       
       if (!result.success) {
-        displayError({ message: 'Failed to toggle logging' });
+        displayError({ message: t('Failed to toggle logging') });
         loggingToggle.checked = !isEnabled;
       }
     } catch (error) {
-      displayError({ message: 'Logging error', details: error.message });
+      displayError({ message: t('Logging error'), details: error.message });
       loggingToggle.checked = false;
     }
   }
@@ -1657,6 +1677,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (d) return d;
     }
     return 0;
+  }
+  
+  /** Release notes in the interface language when the firmware list has them (notes_tr). */
+  function releaseNotes(entry) {
+    return (lang === 'tr' && entry.notesTr) || entry.notes || '';
   }
   
   function chosenBoard() {
@@ -1708,38 +1733,39 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderFirmware() {
     const board = targetBoard();
     const entry = board && fw.boards ? fw.boards[board] : null;
-    const boardName = (b) => (b === 'v1' ? 'v1 · original board' : b === 'v2' ? 'v2 · new board' : b);
+    const boardName = (b) => (b === 'v1' ? t('v1 · original board') : b === 'v2' ? t('v2 · new board') : b);
   
     // Your Odak
     if (!isConnected && fw.readState === 'none') {
-      byId('fw-board').textContent = board ? boardName(board) : 'Not connected';
-      byId('fw-installed').textContent = 'Connect Odak to check its firmware';
+      byId('fw-board').textContent = board ? boardName(board) : t('Not connected');
+      byId('fw-installed').textContent = t('Connect Odak to check its firmware');
     } else if (fw.readState === 'checking') {
-      byId('fw-board').textContent = 'Checking…';
-      byId('fw-installed').textContent = 'Reading the firmware version';
+      byId('fw-board').textContent = t('Checking…');
+      byId('fw-installed').textContent = t('Reading the firmware version');
     } else if (fw.readState === 'ok') {
       byId('fw-board').textContent = boardName(fw.board);
-      byId('fw-installed').textContent = `Firmware v${fw.version}`;
+      byId('fw-installed').textContent = t('Firmware v{version}', { version: fw.version });
     } else {
-      byId('fw-board').textContent = board ? boardName(board) : 'Unknown board';
-      byId('fw-installed').textContent = 'Version could not be read';
+      byId('fw-board').textContent = board ? boardName(board) : t('Unknown board');
+      byId('fw-installed').textContent = t('Version could not be read');
     }
   
     // Latest firmware
     byId('fw-latest').textContent = entry ? `v${entry.version}` : '—';
-    byId('fw-latest-date').textContent = entry && entry.date ? `Released ${entry.date}` : (board && fw.boards && !entry ? `None published for ${board}` : '');
+    byId('fw-latest-date').textContent = entry && entry.date ? t('Released {date}', { date: entry.date }) : (board && fw.boards && !entry ? t('None published for {board}', { board }) : '');
     const notes = byId('fw-notes');
-    notes.classList.toggle('d-none', !entry || !entry.notes);
-    notes.textContent = entry && entry.notes ? entry.notes : '';
+    const notesText = entry ? releaseNotes(entry) : '';
+    notes.classList.toggle('d-none', !notesText);
+    notes.textContent = notesText;
   
     // Ask for the board when the device can't tell us
     const needBoard = fw.readState === 'unknown' || fw.readState === 'no-reply' || (!isConnected && !fw.board);
     byId('fw-unknown').classList.toggle('d-none', !needBoard);
     byId('fw-unknown-why').textContent = fw.readState === 'unknown'
-      ? 'This Odak runs firmware that is too old to report its version.'
+      ? t('This Odak runs firmware that is too old to report its version.')
       : fw.readState === 'no-reply'
-        ? 'Odak did not answer when asked for its version.'
-        : 'Odak is not connected. If it does not connect any more, you can still reinstall its firmware.';
+        ? t('Odak did not answer when asked for its version.')
+        : t('Odak is not connected. If it does not connect any more, you can still reinstall its firmware.');
   
     // State and the install button
     const install = byId('fw-install');
@@ -1751,27 +1777,27 @@ document.addEventListener('DOMContentLoaded', () => {
       return null;
     }
     if (fw.listError) {
-      setFirmwareState('bi-wifi-off', `Could not get the firmware list: ${fw.listError}`, 'warn');
+      setFirmwareState('bi-wifi-off', t('Could not get the firmware list: {error}', { error: fw.listError }), 'warn');
       install.disabled = true;
-      byId('fw-install-text').textContent = 'Install update';
-      note.textContent = 'Check your internet connection and click "Check for updates".';
+      byId('fw-install-text').textContent = t('Install update');
+      note.textContent = t('Check your internet connection and click "Check for updates".');
       return null;
     }
     if (!fw.boards) {
-      setFirmwareState('bi-hourglass', fw.loading ? 'Checking for updates…' : 'Click "Check for updates"', '');
+      setFirmwareState('bi-hourglass', fw.loading ? t('Checking for updates…') : t('Click "Check for updates"'), '');
       install.disabled = true;
       note.textContent = '';
       return null;
     }
     if (!board) {
-      setFirmwareState('bi-question-circle', isConnected ? 'Choose your board below' : 'Waiting for the device', '');
+      setFirmwareState('bi-question-circle', isConnected ? t('Choose your board below') : t('Waiting for the device'), '');
       install.disabled = true;
-      byId('fw-install-text').textContent = 'Install update';
+      byId('fw-install-text').textContent = t('Install update');
       note.textContent = '';
       return null;
     }
     if (!entry) {
-      setFirmwareState('bi-dash-circle', `No firmware published for board ${board} yet`, '');
+      setFirmwareState('bi-dash-circle', t('No firmware published for board {board} yet', { board }), '');
       install.disabled = true;
       note.textContent = '';
       return null;
@@ -1781,20 +1807,20 @@ document.addEventListener('DOMContentLoaded', () => {
       // full version from 2.9.5 on, or a device that has it would be offered it again.
       const diff = compareVersions(entry.version, fw.version);
       if (diff > 0) {
-        setFirmwareState('bi-arrow-up-circle-fill', `Update available: v${fw.version} → v${entry.version}`, 'update');
-        byId('fw-install-text').textContent = `Install v${entry.version}`;
+        setFirmwareState('bi-arrow-up-circle-fill', t('Update available: v{from} → v{to}', { from: fw.version, to: entry.version }), 'update');
+        byId('fw-install-text').textContent = t('Install v{version}', { version: entry.version });
         note.textContent = '';
         offer = entry;
       } else {
-        setFirmwareState('bi-check-circle-fill', `Up to date (v${fw.version})`, 'ok');
+        setFirmwareState('bi-check-circle-fill', t('Up to date (v{version})', { version: fw.version }), 'ok');
         install.className = 'btn btn-outline-secondary';
-        byId('fw-install-text').textContent = `Reinstall v${entry.version}`;
-        note.textContent = 'Only needed if Odak misbehaves.';
+        byId('fw-install-text').textContent = t('Reinstall v{version}', { version: entry.version });
+        note.textContent = t('Only needed if Odak misbehaves.');
       }
     } else {
-      setFirmwareState('bi-info-circle', `Ready to install v${entry.version} for board ${board}`, 'update');
-      byId('fw-install-text').textContent = `Install v${entry.version}`;
-      note.textContent = isConnected ? '' : 'Connect Odak first so the app can restart it into update mode. Only if it no longer connects: hold BOOTSEL while plugging it in.';
+      setFirmwareState('bi-info-circle', t('Ready to install v{version} for board {board}', { version: entry.version, board }), 'update');
+      byId('fw-install-text').textContent = t('Install v{version}', { version: entry.version });
+      note.textContent = isConnected ? '' : t('Connect Odak first so the app can restart it into update mode. Only if it no longer connects: hold BOOTSEL while plugging it in.');
     }
     install.disabled = false;
     return offer;
@@ -1808,8 +1834,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const key = offer ? `${fw.board}-${offer.version}` : null;
     if (!offer || fw.offered.has(key)) return;
     fw.offered.add(key);
-    byId('fw-modal-text').textContent = `Odak firmware v${offer.version} is available for your ${fw.board === 'v1' ? 'original (v1)' : 'v2'} board. You have v${fw.version}. Update now?`;
-    byId('fw-modal-notes').textContent = offer.notes;
+    byId('fw-modal-text').textContent = t(fw.board === 'v1'
+      ? 'Odak firmware v{version} is available for your original (v1) board. You have v{installed}. Update now?'
+      : 'Odak firmware v{version} is available for your v2 board. You have v{installed}. Update now?', { version: offer.version, installed: fw.version });
+    byId('fw-modal-notes').textContent = releaseNotes(offer);
     bootstrap.Modal.getOrCreateInstance(byId('fw-modal')).show();
   }
   
@@ -1824,7 +1852,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateProgress.classList.add('progress-bar-animated');
     updateProgress.classList.remove('bg-danger', 'bg-success');
     updateProgress.style.width = '0%';
-    updateStatus.innerHTML = `<div class="alert alert-info">Downloading firmware v${entry.version}…</div>`;
+    updateStatus.innerHTML = `<div class="alert alert-info">${t('Downloading firmware v{version}…', { version: entry.version })}</div>`;
     const stop = window.api.onFirmwareDownloadProgress(({ received, total }) => {
       if (total) updateProgress.style.width = `${Math.round((received / total) * 40)}%`;
     });
@@ -1838,7 +1866,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateStatus.innerHTML = '';
         const alert = document.createElement('div');
         alert.className = 'alert alert-danger';
-        alert.textContent = `Download failed: ${result.error}`;
+        alert.textContent = t('Download failed: {error}', { error: result.error });
         updateStatus.appendChild(alert);
         return;
       }
@@ -1863,7 +1891,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFirmwareBtn.disabled = false;
       }
     } catch (error) {
-      displayError({ message: 'File selection error', details: error.message });
+      displayError({ message: t('File selection error'), details: error.message });
     }
   }
   
@@ -1871,7 +1899,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!selectedFirmwarePath || fw.busy) return;
     fw.busy = true;
     renderFirmware();
-    await flashFirmware(selectedFirmwarePath, 'the selected file');
+    await flashFirmware(selectedFirmwarePath, t('the selected file'));
     fw.busy = false;
     renderFirmware();
   }
@@ -1889,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateProgress.classList.remove('bg-danger', 'bg-success');
       updateProgressContainer.classList.remove('d-none');
       updateProgress.style.width = '40%';
-      updateStatus.innerHTML = `<div class="alert alert-info">Installing ${label}…</div>`;
+      updateStatus.innerHTML = `<div class="alert alert-info">${t('Installing {label}…', { label })}</div>`;
       
       // Move the bar along while the device restarts and takes the file
       let progress = 40;
@@ -1911,8 +1939,8 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProgress.classList.remove('progress-bar-animated');
         updateProgress.classList.add('bg-success');
         updateStatus.innerHTML = wasConnected
-          ? `<div class="alert alert-success">Installed ${label}. Odak is restarting; the app reconnects by itself.</div>`
-          : `<div class="alert alert-success">Installed ${label}.</div>`;
+          ? `<div class="alert alert-success">${t('Installed {label}. Odak is restarting; the app reconnects by itself.', { label })}</div>`
+          : `<div class="alert alert-success">${t('Installed {label}.', { label })}</div>`;
       } else {
         updateProgress.style.width = '100%';
         updateProgress.classList.remove('progress-bar-animated');
@@ -1920,15 +1948,15 @@ document.addEventListener('DOMContentLoaded', () => {
         updateStatus.innerHTML = '';
         const alert = document.createElement('div');
         alert.className = 'alert alert-danger fw-error';
-        alert.textContent = `Firmware update failed: ${result.error}`;
+        alert.textContent = t('Firmware update failed: {error}', { error: result.error });
         updateStatus.appendChild(alert);
       }
     } catch (error) {
       updateProgress.style.width = '100%';
       updateProgress.classList.remove('progress-bar-animated');
       updateProgress.classList.add('bg-danger');
-      updateStatus.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
-      displayError({ message: 'Firmware update error', details: error.message });
+      updateStatus.innerHTML = `<div class="alert alert-danger">${t('Error: {message}', { message: error.message })}</div>`;
+      displayError({ message: t('Firmware update error'), details: error.message });
     } finally {
       updateFirmwareBtn.disabled = !selectedFirmwarePath;
       firmwareUpdating = false;
@@ -1936,49 +1964,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
+  // Progress lines from the flasher. The main process translates them and tags each with its stage
+  // ('reset' | 'wait' | 'copy' | 'done' | 'error'); untagged lines (script output) just go to the console.
   function updateFirmwareProgress(data) {
-    if (data && data.message) {
-      // Display the message in the update status area
-      const messageLines = data.message.split('\n').filter(line => line.trim() !== '');
-      
-      if (messageLines.length > 0) {
-        // Update the status text
-        for (const line of messageLines) {
-          // Extract progress percentage if available
-          if (line.includes('Waiting')) {
-            updateStatus.innerHTML = `<div class="alert alert-info">${line}</div>`;
-            updateProgress.style.width = '30%';
-          } else if (line.includes('Resetting')) {
-            updateStatus.innerHTML = `<div class="alert alert-info">${line}</div>`;
-            updateProgress.style.width = '10%';
-          } else if (line.includes('Copying')) {
-            updateStatus.innerHTML = `<div class="alert alert-info">${line}</div>`;
-            updateProgress.style.width = '70%';
-          } else if (line.includes('Flash successful')) {
-            updateStatus.innerHTML = `<div class="alert alert-success">${line}</div>`;
-            updateProgress.style.width = '100%';
-            // Stop any spinning animation
-            updateProgress.classList.remove('progress-bar-animated');
-          } else if (line.includes('Error') || line.includes('failed')) {
-            updateStatus.innerHTML = `<div class="alert alert-danger">${line}</div>`;
-            updateProgress.classList.remove('progress-bar-animated');
-            updateProgress.classList.add('bg-danger');
-          } else {
-            // For dots showing progress of waiting
-            if (line.trim() === '.') {
-              const currentText = updateStatus.querySelector('.alert')?.textContent || '';
-              if (currentText.endsWith('...')) {
-                updateStatus.querySelector('.alert').textContent = currentText.replace('...', '.');
-              } else {
-                updateStatus.querySelector('.alert').textContent = currentText + '.';
-              }
-            } else {
-              // Just display the message
-              addToCliOutput(line);
-            }
-          }
+    if (!data || !data.message) return;
+    const line = data.message.trim();
+    if (!line) return;
+    const show = (kind) => {
+      updateStatus.innerHTML = '';
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${kind}`;
+      alert.textContent = line;
+      updateStatus.appendChild(alert);
+    };
+    switch (data.stage) {
+      case 'reset':
+        show('info');
+        updateProgress.style.width = '10%';
+        break;
+      case 'wait':
+        show('info');
+        updateProgress.style.width = '30%';
+        break;
+      case 'copy':
+        show('info');
+        updateProgress.style.width = '70%';
+        break;
+      case 'done':
+        show('success');
+        updateProgress.style.width = '100%';
+        updateProgress.classList.remove('progress-bar-animated');
+        break;
+      case 'error':
+        show('danger');
+        updateProgress.classList.remove('progress-bar-animated');
+        updateProgress.classList.add('bg-danger');
+        break;
+      default:
+        if (line === '.') {
+          // Dots while waiting: grow the message up to three, then start over
+          const alert = updateStatus.querySelector('.alert');
+          if (alert) alert.textContent = alert.textContent.endsWith('...') ? alert.textContent.replace(/\.\.\.$/, '.') : `${alert.textContent}.`;
+        } else {
+          addToCliOutput(line);
         }
-      }
     }
   }
   
@@ -2002,7 +2031,7 @@ document.addEventListener('DOMContentLoaded', () => {
       data: {
         datasets: [
           {
-            label: 'Temperature (°C)',
+            label: t('Temperature (°C)'),
             borderColor: 'rgb(220, 53, 69)', // Danger/red - matching stat card
             backgroundColor: 'rgba(220, 53, 69, 0.1)',
             borderWidth: 2,
@@ -2013,7 +2042,7 @@ document.addEventListener('DOMContentLoaded', () => {
             yAxisID: 'y'
           },
           {
-            label: 'Humidity (%)',
+            label: t('Humidity (%)'),
             borderColor: 'rgb(13, 110, 253)', // Primary/blue - matching stat card
             backgroundColor: 'rgba(13, 110, 253, 0.1)',
             borderWidth: 2,
@@ -2034,7 +2063,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         plugins: {
           title: {
-            text: 'Temperature & Humidity'
+            text: t('Temperature & Humidity')
           }
         },
         scales: {
@@ -2049,13 +2078,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             title: {
               display: true,
-              text: 'Time'
+              text: t('Time')
             }
           },
           y: {
             title: {
               display: true,
-              text: 'Temperature (°C)'
+              text: t('Temperature (°C)')
             },
             position: 'left',
             suggestedMin: 10,
@@ -2064,7 +2093,7 @@ document.addEventListener('DOMContentLoaded', () => {
           y1: {
             title: {
               display: true,
-              text: 'Humidity (%)'
+              text: t('Humidity (%)')
             },
             position: 'right',
             grid: {
@@ -2084,7 +2113,7 @@ document.addEventListener('DOMContentLoaded', () => {
       data: {
         datasets: [
           {
-            label: 'CO2 (ppm)',
+            label: t('CO2 (ppm)'),
             borderColor: 'rgb(255, 152, 0)', // Amber - matching stat card
             backgroundColor: 'rgba(255, 152, 0, 0.1)',
             borderWidth: 2,
@@ -2105,7 +2134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         plugins: {
           title: {
-            text: 'CO2 Level'
+            text: t('CO2 Level')
           }
         },
         scales: {
@@ -2120,13 +2149,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             title: {
               display: true,
-              text: 'Time'
+              text: t('Time')
             }
           },
           y: {
             title: {
               display: true,
-              text: 'CO2 (ppm)'
+              text: t('CO2 (ppm)')
             },
             position: 'left'
           }
@@ -2141,7 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
       data: {
         datasets: [
           {
-            label: 'VOC index',
+            label: t('VOC index'),
             borderColor: 'rgb(108, 117, 125)', // Gray - matching stat card
             backgroundColor: 'rgba(108, 117, 125, 0.1)',
             borderWidth: 2,
@@ -2162,7 +2191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         plugins: {
           title: {
-            text: 'VOC Level'
+            text: t('VOC Level')
           }
         },
         scales: {
@@ -2177,13 +2206,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             title: {
               display: true,
-              text: 'Time'
+              text: t('Time')
             }
           },
           y: {
             title: {
               display: true,
-              text: 'VOC index (100 = usual air)'
+              text: t('VOC index (100 = usual air)')
             },
             position: 'left'
           }
@@ -2198,7 +2227,7 @@ document.addEventListener('DOMContentLoaded', () => {
       data: {
         datasets: [
           {
-            label: 'PM1.0 (µg/m³)',
+            label: t('PM1.0 (µg/m³)'),
             borderColor: 'rgb(25, 135, 84)', // Green - matching stat card
             backgroundColor: 'rgba(124, 255, 112, 0.1)',
             borderWidth: 2,
@@ -2208,7 +2237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data: []
           },
           {
-            label: 'PM2.5 (µg/m³)',
+            label: t('PM2.5 (µg/m³)'),
             borderColor: 'rgb(255, 190, 93)', // Amber - matching stat card
             backgroundColor: 'rgba(255, 165, 0, 0.1)',
             borderWidth: 2,
@@ -2218,7 +2247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data: []
           },
           {
-            label: 'PM10 (µg/m³)',
+            label: t('PM10 (µg/m³)'),
             borderColor: 'rgb(153, 132, 13)', // Danger/red - matching stat card
             backgroundColor: 'rgba(255, 255, 0, 0.1)',
             borderWidth: 2,
@@ -2238,7 +2267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         plugins: {
           title: {
-            text: 'Particulate Matter'
+            text: t('Particulate Matter')
           }
         },
         scales: {
@@ -2253,13 +2282,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             title: {
               display: true,
-              text: 'Time'
+              text: t('Time')
             }
           },
           y: {
             title: {
               display: true,
-              text: 'PM (µg/m³)'
+              text: t('PM (µg/m³)')
             }
           }
         }
@@ -2273,7 +2302,7 @@ document.addEventListener('DOMContentLoaded', () => {
       data: {
         datasets: [
           {
-            label: 'Battery (%)',
+            label: t('Battery (%)'),
             borderColor: 'rgb(13, 202, 240)', // Cyan - matching stat card
             backgroundColor: 'rgba(13, 202, 240, 0.1)',
             borderWidth: 2,
@@ -2293,7 +2322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         plugins: {
           title: {
-            text: 'Battery Voltage'
+            text: t('Battery Voltage')
           }
         },
         scales: {
@@ -2308,13 +2337,13 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             title: {
               display: true,
-              text: 'Time'
+              text: t('Time')
             }
           },
           y: {
             title: {
               display: true,
-              text: 'Voltage (V)'
+              text: t('Voltage (V)')
             }
           }
         }
@@ -2328,7 +2357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: {
             datasets: [
             {
-                label: 'Air Quality Index',
+                label: t('Air Quality Index'),
                 borderColor: 'rgb(111, 66, 193)', // Purple - matching stat card
                 backgroundColor: 'rgba(111, 66, 193, 0.1)',
                 borderWidth: 2,
@@ -2348,7 +2377,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             plugins: {
             title: {
-                text: 'Air Quality Index (AQI)'
+                text: t('Air Quality Index (AQI)')
             }
             },
             scales: {
@@ -2363,13 +2392,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 title: {
                 display: true,
-                text: 'Time'
+                text: t('Time')
                 }
             },
             y: {
                 title: {
                 display: true,
-                text: 'AQI'
+                text: t('AQI')
                 },
                 suggestedMin: 0,
                 suggestedMax: 300
@@ -2385,7 +2414,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: {
             datasets: [
                 {
-                    label: 'Pressure (hPa)',
+                    label: t('Pressure (hPa)'),
                     borderColor: 'rgb(145, 70, 255)', // Violet - matching stat card
                     backgroundColor: 'rgba(145, 70, 255, 0.1)',
                     borderWidth: 2,
@@ -2405,7 +2434,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             plugins: {
                 title: {
-                    text: 'Barometric Pressure'
+                    text: t('Barometric Pressure')
                 }
             },
             scales: {
@@ -2420,13 +2449,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     title: {
                         display: true,
-                        text: 'Time'
+                        text: t('Time')
                     }
                 },
                 y: {
                     title: {
                         display: true,
-                        text: 'Pressure (hPa)'
+                        text: t('Pressure (hPa)')
                     }
                 }
             }
@@ -2440,7 +2469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: {
             datasets: [
                 {
-                    label: 'Elevation (m)',
+                    label: t('Elevation (m)'),
                     borderColor: 'rgb(40, 167, 89)', // Forest green - matching stat card
                     backgroundColor: 'rgba(0, 255, 136, 0.1)',
                     borderWidth: 2,
@@ -2460,7 +2489,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             plugins: {
                 title: {
-                    text: 'Elevation'
+                    text: t('Elevation')
                 }
             },
             scales: {
@@ -2475,13 +2504,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     title: {
                         display: true,
-                        text: 'Time'
+                        text: t('Time')
                     }
                 },
                 y: {
                     title: {
                         display: true,
-                        text: 'Elevation (m)'
+                        text: t('Elevation (m)')
                     }
                 }
             }
@@ -2621,7 +2650,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update charts with empty data
     updateCharts();
     
-    addToCliOutput('Charts cleared', 'cli-command');
+    addToCliOutput(t('Charts cleared'), 'cli-command');
   }
   
   // Exports the console output to a file
@@ -2633,18 +2662,18 @@ document.addEventListener('DOMContentLoaded', () => {
         .join('\n');
       
       // Add header with timestamp
-      const header = `ODAK Console Export - ${new Date().toLocaleString()}\n${'='.repeat(50)}\n\n`;
+      const header = `${t('Odak console export - {time}', { time: new Date().toLocaleString(locale) })}\n${'='.repeat(50)}\n\n`;
       const fullContent = header + consoleContent;
       
       const result = await window.api.exportConsoleOutput(fullContent);
       
       if (result.success) {
-        addToCliOutput(`Console content exported to: ${result.filePath}`, 'cli-info');
+        addToCliOutput(t('Console content exported to: {file}', { file: result.filePath }), 'cli-info');
       } else if (!result.canceled) {
-        displayError({ message: 'Failed to export console content', details: result.error });
+        displayError({ message: t('Failed to export console content'), details: result.error });
       }
     } catch (error) {
-      displayError({ message: 'Export error', details: error.message });
+      displayError({ message: t('Export error'), details: error.message });
     }
   }
   
@@ -2652,7 +2681,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearCliOutput() {
     cliOutput.innerHTML = '';
     // You can add a small message to indicate the console was cleared
-    addToCliOutput('Console cleared', 'cli-info');
+    addToCliOutput(t('Console cleared'), 'cli-info');
   }
   
   // Error handling
@@ -2660,7 +2689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error(error);
     
     // Show error in UI
-    errorMessage.textContent = error.message || 'An error occurred';
+    errorMessage.textContent = error.message || t('An error occurred');
     errorMessage.classList.add('pulse');
     
     // Auto-hide after 5 seconds
@@ -2671,9 +2700,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Show in CLI if connected to that context
     if (error.details) {
-      addToCliOutput(`Error: ${error.message} - ${error.details}`, 'cli-error');
+      addToCliOutput(t('Error: {message}', { message: `${error.message} - ${error.details}` }), 'cli-error');
     } else {
-      addToCliOutput(`Error: ${error.message}`, 'cli-error');
+      addToCliOutput(t('Error: {message}', { message: error.message }), 'cli-error');
     }
   }
   
@@ -2682,7 +2711,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderFirmware();
   window.api.loadHistoryCache().then((result) => {
     if (result.success && result.cache && Array.isArray(result.cache.rows)) historyCache = result.cache;
-    else if (!result.success) addToCliOutput(`Could not load the history cache: ${result.error}`, 'cli-warning');
+    else if (!result.success) addToCliOutput(t('Could not load the history cache: {error}', { error: result.error }), 'cli-warning');
     showDeviceHistory();
   });
 });

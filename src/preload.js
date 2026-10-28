@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // Expose protected APIs to renderer process
 contextBridge.exposeInMainWorld('api', {
+  // Interface language ('en' | 'tr') for the menus and dialogs of the main process
+  setLanguage: (lang) => ipcRenderer.send('set-language', lang),
+
   // Serial communication
   getPorts: () => ipcRenderer.on('ports-list', (event, ports) => ports),
   connectToPort: (portConfig) => ipcRenderer.invoke('connect-port', portConfig),

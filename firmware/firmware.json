@@ -6,7 +6,8 @@
       "date": "2026-10-24",
       "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v2-2.9.6/odak-v2-2.9.6.uf2",
       "sha256": "c648a1cbd74c6e2bd906dc5c7cb40b722454bdd82108392104875e7a4e9930a7",
-      "notes": "Shows its full version number (v2.9.6), so the app stops offering the same update again\nMeasurements no longer stop until a button is pressed\nThis month page (weeks of the current month) instead of Last 2 months\nAir Coach action cards, My day / This week pages, setup steps"
+      "notes": "Shows its full version number (v2.9.6), so the app stops offering the same update again\nMeasurements no longer stop until a button is pressed\nThis month page (weeks of the current month) instead of Last 2 months\nAir Coach action cards, My day / This week pages, setup steps",
+      "notes_tr": "Tam sürüm numarasını (v2.9.6) gösterir; böylece uygulama aynı güncellemeyi tekrar önermez\nÖlçümler artık bir düğmeye basılana kadar durmaz\nSon 2 ay yerine Bu ay sayfası (bu ayın haftaları)\nHava Koçu öneri kartları, Günüm / Bu hafta sayfaları, kurulum adımları"
     },
     "v1": {
       "name": "Original board",
@@ -14,7 +15,8 @@
       "date": "2026-10-24",
       "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v1-1.7.1/odak-v1-1.7.1.uf2",
       "sha256": "e2b4712706be395075430a2b8e87de683625cec6697068930848d6d1709cdde9",
-      "notes": "Original board: day parts and new pages (My day, This week, This month), Air Coach action cards\nSetup asks your priorities, date & time and daily plan; real clock and a long-term data log\nVOC from Bosch BSEC 3.3 (low-power mode) in ppm; CO2 averaged over 8 readings with pressure correction\nNew charging icon; Tracking page as on the new board\nMeasurements no longer stop until a button is pressed"
+      "notes": "Original board: day parts and new pages (My day, This week, This month), Air Coach action cards\nSetup asks your priorities, date & time and daily plan; real clock and a long-term data log\nVOC from Bosch BSEC 3.3 (low-power mode) in ppm; CO2 averaged over 8 readings with pressure correction\nNew charging icon; Tracking page as on the new board\nMeasurements no longer stop until a button is pressed",
+      "notes_tr": "İlk kart: gün bölümleri ve yeni sayfalar (Günüm, Bu hafta, Bu ay), Hava Koçu öneri kartları\nKurulumda öncelikleriniz, tarih ve saat ile günlük planınız sorulur; gerçek saat ve uzun süreli veri kaydı\nBosch BSEC 3.3 ile VOC (düşük güç modu) ppm cinsinden; CO2, basınç düzeltmesiyle 8 ölçümün ortalaması\nYeni şarj simgesi; yeni karttaki gibi İzleme sayfası\nÖlçümler artık bir düğmeye basılana kadar durmaz"
     }
   }
 }

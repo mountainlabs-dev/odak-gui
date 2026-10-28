@@ -7,7 +7,7 @@
 # (see .github/workflows/release.yml, which also sets `version` from package.json)
 name: odak-gui
 title: Odak Air Quality Monitor
-version: '0.6.0'
+version: '0.7.0'
 summary: Live readings, history and Air Coach results from your Odak
 description: |
   The desktop companion for the Odak Clean Air Assistant by Mountain Labs.

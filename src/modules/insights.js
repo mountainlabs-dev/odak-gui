@@ -15,33 +15,35 @@
  * so moving between views over six months of data stays instant.
  */
 
+import { t, lang, locale } from '../i18n.js';
+
 // ─── Parts of the day, levels, metrics ──────────────────────────────────────
 // Phase index = firmware Schedule::Phase - 1
 export const PHASES = [
-  { key: 'wake', name: 'Wake', icon: 'bi-sunrise', color: '#f2b632' },
-  { key: 'focus', name: 'Focus', icon: 'bi-laptop', color: '#3a8dff' },
-  { key: 'rest', name: 'Rest', icon: 'bi-cup-hot', color: '#20a671' },
-  { key: 'sleep', name: 'Sleep', icon: 'bi-moon-stars', color: '#6f42c1' },
+  { key: 'wake', name: t('Wake'), icon: 'bi-sunrise', color: '#f2b632' },
+  { key: 'focus', name: t('Focus'), icon: 'bi-laptop', color: '#3a8dff' },
+  { key: 'rest', name: t('Rest'), icon: 'bi-cup-hot', color: '#20a671' },
+  { key: 'sleep', name: t('Sleep'), icon: 'bi-moon-stars', color: '#6f42c1' },
 ];
 // Display order of a day, as on the device: sleep, wake, focus, rest
 export const DAY_ORDER = [3, 0, 1, 2];
 
 export const LEVELS = [
-  { name: 'Good', color: '#2fb380' },
-  { name: 'Fair', color: '#f2c94c' },
-  { name: 'Poor', color: '#f2994a' },
-  { name: 'Bad', color: '#e5484d' },
+  { name: t('Good'), color: '#2fb380' },
+  { name: t('Fair'), color: '#f2c94c' },
+  { name: t('Poor'), color: '#f2994a' },
+  { name: t('Bad'), color: '#e5484d' },
 ];
 const DRIVER_NAMES = ['CO₂', 'PM2.5', 'VOC'];
-const CO2_TIPS = ['Air the room after waking up', 'Air the room before focus time', 'Open a window in the evening', 'Air the room before bed'];
+const CO2_TIPS = ['Air the room after waking up', 'Air the room before focus time', 'Open a window in the evening', 'Air the room before bed'].map((tip) => t(tip));
 
 export const METRICS = {
   // limits: [value, level reached above it], drawn as dashed lines
   co2: { label: 'CO₂', unit: 'ppm', digits: 0, limits: [[800, 1], [1000, 2], [1400, 3]] },
   pm25: { label: 'PM2.5', unit: 'µg/m³', digits: 1, limits: [[12, 1], [35, 2], [55, 3]] },
-  voc: { label: 'VOC index', unit: '', digits: 0, limits: [[150, 1], [200, 3]] },
-  temp: { label: 'Temperature', unit: '°C', digits: 1 },
-  hum: { label: 'Humidity', unit: '%', digits: 0 },
+  voc: { label: t('VOC index'), unit: '', digits: 0, limits: [[150, 1], [200, 3]] },
+  temp: { label: t('Temperature'), unit: '°C', digits: 1 },
+  hum: { label: t('Humidity'), unit: '%', digits: 0 },
 };
 const METRIC_KEYS = Object.keys(METRICS);
 
@@ -66,10 +68,10 @@ export function rate(co2, pm25, voc) {
 // ─── Priorities and their risk levels (air_coach.cpp) ───────────────────────
 // Index = bit / number used by $SET_PRIORITY (0 allergy, 1 infection, 2 fatigue, 3 focus)
 export const PRIORITIES = [
-  { key: 'allergy', name: 'Allergy', icon: 'bi-flower1', color: '#d9534f', exposure: 'fine dust, damp air or irritants' },
-  { key: 'infection', name: 'Infection', icon: 'bi-shield-plus', color: '#0d6efd', exposure: 'stale, already-breathed air' },
-  { key: 'fatigue', name: 'Fatigue & migraine', icon: 'bi-lightning-charge', color: '#fd7e14', exposure: 'stale air, heat or irritants' },
-  { key: 'focus', name: 'Focus & productivity', icon: 'bi-bullseye', color: '#6f42c1', exposure: 'stale air or discomfort while working' },
+  { key: 'allergy', name: t('Allergy'), icon: 'bi-flower1', color: '#d9534f', exposure: t('fine dust, damp air or irritants') },
+  { key: 'infection', name: t('Infection'), icon: 'bi-shield-plus', color: '#0d6efd', exposure: t('stale, already-breathed air') },
+  { key: 'fatigue', name: t('Fatigue & migraine'), icon: 'bi-lightning-charge', color: '#fd7e14', exposure: t('stale air, heat or irritants') },
+  { key: 'focus', name: t('Focus & productivity'), icon: 'bi-bullseye', color: '#6f42c1', exposure: t('stale air or discomfort while working') },
 ];
 
 const band = (v, l1, l2, l3) => (v > l3 ? 3 : v > l2 ? 2 : v > l1 ? 1 : 0);
@@ -102,29 +104,29 @@ function riskLevels(s) {
 // risks: the priorities an action serves. Instant actions follow the model's table;
 // for coming-up actions (S, W, F, R) the grouping is the app's, from what each targets.
 export const ACTIONS = {
-  I1: { text: 'Open a window for 10 min', kind: 'Instant', risks: [1, 2, 3] },
-  I2: { text: 'Air across the room 5 min', kind: 'Instant', risks: [0, 1, 2, 3] },
-  I3: { text: 'Take a 5-min fresh-air break', kind: 'Instant', risks: [2, 3] },
-  I4: { text: 'Close windows, run a purifier', kind: 'Instant', risks: [0, 2] },
-  I5: { text: 'Damp-dust and vacuum', kind: 'Instant', risks: [0] },
-  I6: { text: 'No sprays or scents; ventilate', kind: 'Instant', risks: [0, 2] },
-  I7: { text: 'Lower humidity: ventilate, dehumidify', kind: 'Instant', risks: [0] },
-  I8: { text: 'Raise humidity: humidifier', kind: 'Instant', risks: [1, 2] },
-  I9: { text: 'Cool the room', kind: 'Instant', risks: [2, 3] },
-  I10: { text: 'Drink a glass of water', kind: 'Instant', risks: [2] },
-  S1: { text: 'Air the bedroom 15 min before bed', kind: 'Before sleep', risks: [1, 2, 3] },
-  S2: { text: 'Leave the door or a window ajar tonight', kind: 'Before sleep', risks: [1, 2, 3] },
-  S3: { text: 'Cool the bedroom to 24 °C or less', kind: 'Before sleep', risks: [2] },
-  S4: { text: 'Run the purifier, windows closed', kind: 'Before sleep', risks: [0, 2] },
-  S5: { text: 'Ventilate bathroom steam, dehumidify', kind: 'Before sleep', risks: [0] },
-  W: { text: 'Morning plan after the night', kind: 'Morning', risks: [0, 1, 2, 3] },
-  F1: { text: 'Air the room before you start', kind: 'Before focus', risks: [1, 3] },
-  F2: { text: 'Air 5 min every 45 min today', kind: 'Before focus', risks: [1, 3] },
-  F3: { text: 'Set the room to 21–23 °C', kind: 'Before focus', risks: [3] },
-  F4: { text: 'No candles or sprays while you work', kind: 'Before focus', risks: [2, 3] },
-  R1: { text: 'Use the hood and ventilate while cooking', kind: 'Before rest', risks: [0, 2] },
-  R2: { text: 'A short walk outside', kind: 'Before rest', risks: [2, 3] },
-  R3: { text: 'Air the room after dinner', kind: 'Before rest', risks: [1, 2] },
+  I1: { text: t('Open a window for 10 min'), kind: 'Instant', risks: [1, 2, 3] },
+  I2: { text: t('Air across the room 5 min'), kind: 'Instant', risks: [0, 1, 2, 3] },
+  I3: { text: t('Take a 5-min fresh-air break'), kind: 'Instant', risks: [2, 3] },
+  I4: { text: t('Close windows, run a purifier'), kind: 'Instant', risks: [0, 2] },
+  I5: { text: t('Damp-dust and vacuum'), kind: 'Instant', risks: [0] },
+  I6: { text: t('No sprays or scents; ventilate'), kind: 'Instant', risks: [0, 2] },
+  I7: { text: t('Lower humidity: ventilate, dehumidify'), kind: 'Instant', risks: [0] },
+  I8: { text: t('Raise humidity: humidifier'), kind: 'Instant', risks: [1, 2] },
+  I9: { text: t('Cool the room'), kind: 'Instant', risks: [2, 3] },
+  I10: { text: t('Drink a glass of water'), kind: 'Instant', risks: [2] },
+  S1: { text: t('Air the bedroom 15 min before bed'), kind: 'Before sleep', risks: [1, 2, 3] },
+  S2: { text: t('Leave the door or a window ajar tonight'), kind: 'Before sleep', risks: [1, 2, 3] },
+  S3: { text: t('Cool the bedroom to 24 °C or less'), kind: 'Before sleep', risks: [2] },
+  S4: { text: t('Run the purifier, windows closed'), kind: 'Before sleep', risks: [0, 2] },
+  S5: { text: t('Ventilate bathroom steam, dehumidify'), kind: 'Before sleep', risks: [0] },
+  W: { text: t('Morning plan after the night'), kind: 'Morning', risks: [0, 1, 2, 3] },
+  F1: { text: t('Air the room before you start'), kind: 'Before focus', risks: [1, 3] },
+  F2: { text: t('Air 5 min every 45 min today'), kind: 'Before focus', risks: [1, 3] },
+  F3: { text: t('Set the room to 21–23 °C'), kind: 'Before focus', risks: [3] },
+  F4: { text: t('No candles or sprays while you work'), kind: 'Before focus', risks: [2, 3] },
+  R1: { text: t('Use the hood and ventilate while cooking'), kind: 'Before rest', risks: [0, 2] },
+  R2: { text: t('A short walk outside'), kind: 'Before rest', risks: [2, 3] },
+  R3: { text: t('Air the room after dinner'), kind: 'Before rest', risks: [1, 2] },
 };
 const actionInfo = (code) => ACTIONS[code] || { text: code, kind: '', risks: [] };
 
@@ -189,7 +191,7 @@ class Stats {
   rating() { return rate(this.avgCo2, this.avgPm, this.avgVoc); }
   level() { return this.empty ? null : this.rating().level; }
   driverValue(driver) {
-    return driver === 1 ? `${this.avgPm.toFixed(0)} µg/m³` : driver === 2 ? `index ${this.avgVoc.toFixed(0)}` : `${this.avgCo2.toFixed(0)} ppm`;
+    return driver === 1 ? `${this.avgPm.toFixed(0)} µg/m³` : driver === 2 ? t('index {value}', { value: this.avgVoc.toFixed(0) }) : `${this.avgCo2.toFixed(0)} ppm`;
   }
 }
 
@@ -313,7 +315,9 @@ const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
 const addMonths = (d, n) => new Date(d.getFullYear(), d.getMonth() + n, 1);
 export const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const fromIso = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
-const fmt = (d, opts) => d.toLocaleDateString('en-GB', opts);
+const fmt = (d, opts) => d.toLocaleDateString(locale, opts);
+/** "67%" in English, "%67" in Turkish. */
+const percent = (n) => (lang === 'tr' ? `%${n}` : `${n}%`);
 const hhmm = (minutes) => `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
 /** Weekday or weekend plan for a local date (Sat/Sun = weekend), like Schedule::profileAt. */
@@ -459,10 +463,10 @@ function careCounts(entries) {
 }
 
 const OUTCOME_TEXT = {
-  improved: ['Air improved', 'success'], prevented: ['Bad air prevented', 'success'], kept_good: ['Kept good', 'success'],
-  no_change: ['No change', 'muted'], not_measured: ['Not measurable', 'muted'], pending: ['Checking…', 'muted'],
+  improved: [t('Air improved'), 'success'], prevented: [t('Bad air prevented'), 'success'], kept_good: [t('Kept good'), 'success'],
+  no_change: [t('No change'), 'muted'], not_measured: [t('Not measurable'), 'muted'], pending: [t('Checking…'), 'muted'],
 };
-const ANSWER_TEXT = { done: 'Done', later: 'Later', none: 'No answer', pending: 'Open' };
+const ANSWER_TEXT = { done: t('Done'), later: t('Later'), none: t('No answer'), pending: t('Open') };
 
 // ─── Chart.js plugin: schedule phases, level limits, coach markers ──────────
 const backgroundPlugin = {
@@ -605,13 +609,13 @@ export class InsightsView {
     this.el.date.value = isoDate(this.date);
     if (this.chart) { this.chart.destroy(); this.chart = null; }
     if (this.samples.length === 0) {
-      this.el.title.textContent = 'No history yet';
+      this.el.title.textContent = t('No history yet');
       this.el.summary.innerHTML = '';
       this.el.coach.innerHTML = '';
       this.el.content.innerHTML = `
         <div class="insights-empty">
           <i class="bi bi-graph-up"></i>
-          <div>Connect your Odak and click <b>Sync from device</b>, or drop an exported file here.</div>
+          <div>${t('Connect your Odak and click <b>Sync from device</b>, or drop an exported file here.')}</div>
         </div>`;
       this.el.chartWrap.classList.add('d-none');
       return;
@@ -630,13 +634,13 @@ export class InsightsView {
     const st = agg.metrics.get(this.metric);
     const all = agg.stats;
     const chips = [];
-    if (!all.empty) chips.push(['Good air', `${Math.round((all.good / all.n) * 100)}%`, 'of the time']);
+    if (!all.empty) chips.push([t('Good air'), percent(Math.round((all.good / all.n) * 100)), t('of the time')]);
     if (st) {
-      chips.push([`Average ${m.label}`, formatMetric(st.avg, this.metric), '']);
-      chips.push(['Lowest – highest', `${formatMetric(st.min, this.metric, false)} – ${formatMetric(st.max, this.metric)}`, '']);
+      chips.push([t('Average {metric}', { metric: m.label }), formatMetric(st.avg, this.metric), '']);
+      chips.push([t('Lowest – highest'), `${formatMetric(st.min, this.metric, false)} – ${formatMetric(st.max, this.metric)}`, '']);
     }
-    if (!all.empty) chips.push(['CO₂ above 1000 ppm', `${Math.round((all.above1000 / all.n) * 100)}%`, 'of the time']);
-    chips.push(['Measurements', all.n.toLocaleString(), '']);
+    if (!all.empty) chips.push([t('CO₂ above 1000 ppm'), percent(Math.round((all.above1000 / all.n) * 100)), t('of the time')]);
+    chips.push([t('Measurements'), all.n.toLocaleString(locale), '']);
     this.el.summary.innerHTML = chips.map(([label, value, note]) => `
       <div class="insights-chip">
         <div class="insights-chip-label">${label}</div>
@@ -651,7 +655,7 @@ export class InsightsView {
    */
   comparison(index, agg, previous, periodName, from, to) {
     if (previous && previous.stats.n >= agg.stats.n * 0.5) {
-      return { before: previous, after: agg, text: (d) => `${d} pts vs previous ${periodName}` };
+      return { before: previous, after: agg, text: (d) => t(`{points} pts vs previous ${periodName}`, { points: d }) };
     }
     if (to - from < 40 * 86400000) return null;
     const months = [];
@@ -693,17 +697,17 @@ export class InsightsView {
         const cls = diff < 0 ? 'better' : diff > 0 ? 'worse' : '';
         const icon = diff < 0 ? 'bi-arrow-down' : diff > 0 ? 'bi-arrow-up' : 'bi-dash';
         const text = compare.text
-          ? (diff === 0 ? `same as previous ${periodName}` : compare.text(Math.abs(diff)))
-          : `was ${Math.round(was)}% in ${compare.firstName}, ${Math.round(now)}% in ${compare.lastName}`;
+          ? (diff === 0 ? t(`same as previous ${periodName}`) : compare.text(Math.abs(diff)))
+          : t('was {before}% in {first}, {after}% in {last}', { before: Math.round(was), first: compare.firstName, after: Math.round(now), last: compare.lastName });
         trend = `<span class="trend ${cls}"><i class="bi ${icon}"></i> ${text}</span>`;
       }
       return `
         <div class="priority-card" style="--accent:${pr.color}">
           <div class="priority-head"><i class="bi ${pr.icon}"></i> ${pr.name}</div>
-          <div class="priority-value">${share === null ? '—' : `${Math.round(share)}%`}</div>
-          <div class="priority-note">of ${p === 3 ? 'focus time' : 'the time'} with raised exposure to ${pr.exposure}</div>
+          <div class="priority-value">${share === null ? '—' : percent(Math.round(share))}</div>
+          <div class="priority-note">${t(p === 3 ? 'of focus time with raised exposure to {exposure}' : 'of the time with raised exposure to {exposure}', { exposure: pr.exposure })}</div>
           ${trend}
-          <div class="priority-actions">${done} action${done === 1 ? '' : 's'} done for this · ${good} helped</div>
+          <div class="priority-actions">${t(done === 1 ? '1 action done for this · {helped} helped' : '{done} actions done for this · {helped} helped', { done, helped: good })}</div>
         </div>`;
     }).join('');
 
@@ -713,7 +717,7 @@ export class InsightsView {
 
     const entries = list ? agg.care.slice().sort((a, b) => a.t - b.t).map((e) => {
       const [outText, outKind] = OUTCOME_TEXT[e.outcome] || [e.outcome, 'muted'];
-      const time = new Date(e.t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const time = new Date(e.t).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
       return `<li><span class="coach-time">${time}</span><span class="action-code">${escapeHtml(e.action)}</span>
         <span class="flex-grow-1">${escapeHtml(actionInfo(e.action).text)}</span>
         <span class="badge text-bg-light">${ANSWER_TEXT[e.answer] || escapeHtml(e.answer)}</span>
@@ -723,28 +727,28 @@ export class InsightsView {
     this.el.coach.innerHTML = `
       <div class="coach-section">
         <div class="d-flex align-items-baseline gap-2 mb-2">
-          <h6 class="fw-semibold mb-0"><i class="bi bi-stars me-1"></i> Air Coach</h6>
-          <span class="small text-muted">Suggestions Odak made on its screen and what happened next</span>
+          <h6 class="fw-semibold mb-0"><i class="bi bi-stars me-1"></i> ${t('Air Coach')}</h6>
+          <span class="small text-muted">${t('Suggestions Odak made on its screen and what happened next')}</span>
         </div>
         ${c.shown === 0
-          ? `<div class="small text-muted mb-3">No suggestions in this ${periodName}${this.care.length === 0 ? ' — sync with a device running the Air Coach firmware to see them' : ''}.</div>`
+          ? `<div class="small text-muted mb-3">${t(`No suggestions in this ${periodName}`)}${this.care.length === 0 ? t(' — sync with a device running the Air Coach firmware to see them') : ''}.</div>`
           : `<div class="coach-stats">
-              ${stat(c.shown, 'actions suggested', 'bi-chat-square-text')}
-              ${stat(c.done, 'done by you', 'bi-check2-circle')}
-              ${stat(c.improved, 'times air improved', 'bi-graph-down-arrow', 'good')}
-              ${stat(c.prevented, 'bad parts of the day prevented', 'bi-shield-check', 'good')}
+              ${stat(c.shown, t('actions suggested'), 'bi-chat-square-text')}
+              ${stat(c.done, t('done by you'), 'bi-check2-circle')}
+              ${stat(c.improved, t('times air improved'), 'bi-graph-down-arrow', 'good')}
+              ${stat(c.prevented, t('bad parts of the day prevented'), 'bi-shield-check', 'good')}
             </div>
-            <div class="small text-muted mt-1">${helped > 0 ? `Your actions made the air better ${helped} time${helped === 1 ? '' : 's'}` : 'No measured improvement yet'}${c.keptGood ? `, and kept it good ${c.keptGood} more` : ''}.</div>`}
+            <div class="small text-muted mt-1">${helped > 0 ? t(helped === 1 ? 'Your actions made the air better 1 time' : 'Your actions made the air better {count} times', { count: helped }) : t('No measured improvement yet')}${c.keptGood ? t(', and kept it good {count} more', { count: c.keptGood }) : ''}.</div>`}
         ${entries ? `<ul class="coach-list mt-2">${entries}</ul>` : ''}
         ${!list && top ? `
           <table class="table table-sm small coach-table mt-2">
-            <thead><tr><th>Most suggested</th><th class="text-end">Shown</th><th class="text-end">Done</th><th class="text-end">Helped</th></tr></thead>
+            <thead><tr><th>${t('Most suggested')}</th><th class="text-end">${t('Shown')}</th><th class="text-end">${t('Done')}</th><th class="text-end">${t('Helped')}</th></tr></thead>
             <tbody>${top}</tbody>
           </table>` : ''}
-        <h6 class="fw-semibold mt-3 mb-2">${chosen.length ? 'Your priorities' : 'By priority'}
-          ${chosen.length ? '' : '<span class="small text-muted fw-normal">— choose up to two in My Plan to focus on them</span>'}</h6>
+        <h6 class="fw-semibold mt-3 mb-2">${chosen.length ? t('Your priorities') : t('By priority')}
+          ${chosen.length ? '' : `<span class="small text-muted fw-normal">${t('— choose up to two in My Plan to focus on them')}</span>`}</h6>
         <div class="priority-cards">${cards}</div>
-        <div class="small text-muted mt-2">Odak coaches you to lower your exposure to known triggers. It does not diagnose or treat any condition.</div>
+        <div class="small text-muted mt-2">${t('Odak coaches you to lower your exposure to known triggers. It does not diagnose or treat any condition.')}</div>
       </div>`;
   }
 
@@ -764,15 +768,15 @@ export class InsightsView {
       const phase = PHASES[p];
       const st = agg.phases[p];
       const plan = schedule ? schedule[p === 3 ? profileFor(addDays(this.date, -1)) : profile] : null;
-      const startText = plan ? `from ${hhmm(plan[p])}` : '';
+      const startText = plan ? t('from {time}', { time: hhmm(plan[p]) }) : '';
       const done = agg.care.filter(e => e.answer === 'done' && phaseAt(new Date(e.t), schedule) === p).length;
-      const doneText = done ? `<span class="tile-done" title="Actions done"><i class="bi bi-check2"></i> ${done}</span>` : '';
+      const doneText = done ? `<span class="tile-done" title="${t('Actions done')}"><i class="bi bi-check2"></i> ${done}</span>` : '';
       if (st.empty) {
         return `
           <div class="phase-tile empty">
             <div class="phase-tile-head"><i class="bi ${phase.icon}" style="color:${phase.color}"></i> ${phase.name}<span>${startText}</span></div>
             <div class="phase-tile-level">—</div>
-            <div class="phase-tile-note">no data ${doneText}</div>
+            <div class="phase-tile-note">${t('no data')} ${doneText}</div>
           </div>`;
       }
       const { level, driver } = st.rating();
@@ -787,18 +791,18 @@ export class InsightsView {
     });
 
     // One tip for the worst part of the day, as on the device
-    let tip = 'Great air today — keep it up';
+    let tip = t('Great air today — keep it up');
     if (worst >= 0) {
-      if (worstDriver === 1) tip = 'Dust and vacuum; check outdoor air';
-      else if (worstDriver === 2) tip = 'Ventilate; avoid sprays and scents';
+      if (worstDriver === 1) tip = t('Dust and vacuum; check outdoor air');
+      else if (worstDriver === 2) tip = t('Ventilate; avoid sprays and scents');
       else tip = CO2_TIPS[worst];
     }
 
     const windowText = schedule
-      ? `${new Date(from).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} – ${new Date(to).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} · ${profile === 'weekend' ? 'weekend' : 'weekday'} plan · last night's sleep counts for this day`
-      : 'Calendar day — set a plan in My Plan to rate each part of the day';
+      ? `${new Date(from).toLocaleString(locale, { weekday: 'short', hour: '2-digit', minute: '2-digit' })} – ${new Date(to).toLocaleString(locale, { weekday: 'short', hour: '2-digit', minute: '2-digit' })} · ${t(profile === 'weekend' ? 'weekend plan' : 'weekday plan')} · ${t("last night's sleep counts for this day")}`
+      : t('Calendar day — set a plan in My Plan to rate each part of the day');
     this.el.content.innerHTML = samples.length === 0
-      ? '<div class="insights-empty small"><i class="bi bi-calendar-x"></i><div>No measurements on this day.</div></div>'
+      ? `<div class="insights-empty small"><i class="bi bi-calendar-x"></i><div>${t('No measurements on this day.')}</div></div>`
       : `
         <div class="small text-muted mb-2"><i class="bi bi-calendar-week me-1"></i>${windowText}</div>
         ${schedule ? `<div class="phase-tiles">${tiles.join('')}</div>
@@ -854,7 +858,7 @@ export class InsightsView {
             type: 'time',
             min: from,
             max: to,
-            time: { unit: 'hour', stepSize: 3, tooltipFormat: 'EEE HH:mm', displayFormats: { hour: 'HH:mm' } },
+            time: { unit: 'hour', stepSize: 3, tooltipFormat: lang === 'tr' ? 'dd.MM HH:mm' : 'EEE HH:mm', displayFormats: { hour: 'HH:mm' } },
           },
           y: { title: { display: true, text: `${m.label}${m.unit ? ` (${m.unit})` : ''}` } },
         },
@@ -877,7 +881,7 @@ export class InsightsView {
         datasets: [
           {
             type: 'line',
-            label: 'Average',
+            label: t('Average'),
             data: stats.map(s => (s ? Number(s.avg.toFixed(m.digits)) : null)),
             borderColor: '#0057ff',
             backgroundColor: '#0057ff',
@@ -888,7 +892,7 @@ export class InsightsView {
             yAxisID: 'y',
           },
           {
-            label: 'Lowest – highest',
+            label: t('Lowest – highest'),
             data: stats.map(s => (s ? [s.min, s.max] : null)),
             backgroundColor: periods.map(p => { const l = p.agg.stats.level(); return l === null ? 'rgba(108,117,125,0.25)' : `${LEVELS[l].color}66`; }),
             borderRadius: 4,
@@ -896,7 +900,7 @@ export class InsightsView {
             yAxisID: 'y',
           },
           ...(hasCare ? [{
-            label: 'Actions done',
+            label: t('Actions done'),
             data: periods.map(p => p.agg.care.filter(e => e.answer === 'done').length),
             backgroundColor: 'rgba(111, 66, 193, 0.75)',
             borderRadius: 3,
@@ -916,17 +920,17 @@ export class InsightsView {
           tooltip: {
             callbacks: {
               label: (item) => (item.dataset.yAxisID === 'y1'
-                ? `Actions done: ${item.raw}`
+                ? `${t('Actions done')}: ${item.raw}`
                 : Array.isArray(item.raw)
-                  ? `Lowest – highest: ${formatMetric(item.raw[0], this.metric, false)} – ${formatMetric(item.raw[1], this.metric)}`
-                  : `Average: ${formatMetric(item.raw, this.metric)}`),
+                  ? `${t('Lowest – highest')}: ${formatMetric(item.raw[0], this.metric, false)} – ${formatMetric(item.raw[1], this.metric)}`
+                  : `${t('Average')}: ${formatMetric(item.raw, this.metric)}`),
             },
           },
           odakBackground: { limits: m.limits || [] },
         },
         scales: {
           y: { title: { display: true, text: `${m.label}${m.unit ? ` (${m.unit})` : ''}` } },
-          ...(hasCare ? { y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { precision: 0 }, title: { display: true, text: 'Actions done' } } } : {}),
+          ...(hasCare ? { y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { precision: 0 }, title: { display: true, text: t('Actions done') } } } : {}),
         },
       },
       plugins: [backgroundPlugin],
@@ -962,23 +966,23 @@ export class InsightsView {
       </tr>`).join('') : '';
     const dayRow = `
       <tr class="day-row">
-        <th class="row-head"><i class="bi bi-sun me-1"></i>Whole day</th>
+        <th class="row-head"><i class="bi bi-sun me-1"></i>${t('Whole day')}</th>
         ${days.map(d => this.gridCell(d.agg.stats.level(), d.agg.stats.empty ? '' : value(d.agg.metrics), `data-date="${isoDate(d.date)}"`)).join('')}
       </tr>`;
     const doneRow = `
       <tr>
-        <th class="row-head"><i class="bi bi-check2-circle me-1"></i>Actions done</th>
+        <th class="row-head"><i class="bi bi-check2-circle me-1"></i>${t('Actions done')}</th>
         ${days.map(d => { const n = d.agg.care.filter(e => e.answer === 'done').length; return `<td class="grid-count">${n || ''}</td>`; }).join('')}
       </tr>`;
     this.el.content.innerHTML = `
-      ${schedule ? '' : '<div class="small text-muted mb-2">Set a plan in My Plan to see each part of the day.</div>'}
+      ${schedule ? '' : `<div class="small text-muted mb-2">${t('Set a plan in My Plan to see each part of the day.')}</div>`}
       <div class="table-responsive">
         <table class="insights-grid">
           <thead><tr><th></th>${header}</tr></thead>
           <tbody>${phaseRows}${dayRow}${doneRow}</tbody>
         </table>
       </div>
-      <div class="small text-muted mt-1">Values are the average ${METRICS[this.metric].label}. Each night is in the column of the morning it ends. Click a day to open it.</div>`;
+      <div class="small text-muted mt-1">${t('Values are the average {metric}. Each night is in the column of the morning it ends. Click a day to open it.', { metric: METRICS[this.metric].label })}</div>`;
     this.renderPeriodChart(days);
     this.renderCoach(agg, null, 'week', { compare: this.comparison(index, agg, index.range(addDays(first, -7), first), 'week', first, next) });
   }
@@ -996,17 +1000,18 @@ export class InsightsView {
       const done = day ? day.care.filter(e => e.answer === 'done').length : 0;
       const cls = `cal-cell ${level === null ? 'empty' : 'has-data'} ${isoDate(date) === today ? 'today' : ''}`;
       if (mini) {
-        cells.push(`<div class="${cls}" data-date="${isoDate(date)}"${style} title="${fmt(date, { weekday: 'short', day: 'numeric', month: 'short' })}${level === null ? '' : ` · ${LEVELS[level].name}`}${done ? ` · ${done} done` : ''}">${date.getDate()}</div>`);
+        cells.push(`<div class="${cls}" data-date="${isoDate(date)}"${style} title="${fmt(date, { weekday: 'short', day: 'numeric', month: 'short' })}${level === null ? '' : ` · ${LEVELS[level].name}`}${done ? ` · ${t('{count} done', { count: done })}` : ''}">${date.getDate()}</div>`);
       } else {
         const st = day ? day.metrics.get(this.metric) : null;
         cells.push(`
           <div class="${cls}" data-date="${isoDate(date)}"${style}>
-            <div class="cal-day">${date.getDate()}${done ? `<span class="cal-done" title="Actions done"><i class="bi bi-check2"></i>${done}</span>` : ''}</div>
+            <div class="cal-day">${date.getDate()}${done ? `<span class="cal-done" title="${t('Actions done')}"><i class="bi bi-check2"></i>${done}</span>` : ''}</div>
             ${level === null ? '' : `<div class="cal-level">${LEVELS[level].name}</div><div class="cal-value">${formatMetric(st?.avg ?? null, this.metric)}</div>`}
           </div>`);
       }
     }
-    const heads = (mini ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']).map(n => `<div class="cal-head">${n}</div>`).join('');
+    const miniHeads = lang === 'tr' ? ['P', 'S', 'Ç', 'P', 'C', 'C', 'P'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const heads = (mini ? miniHeads : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => t(d))).map(n => `<div class="cal-head">${n}</div>`).join('');
     return `<div class="calendar ${mini ? 'mini' : ''}">${heads}${cells.join('')}</div>`;
   }
 
@@ -1029,7 +1034,7 @@ export class InsightsView {
     const goodDays = dataDays.filter(d => d.agg.stats.level() === 0).length;
     this.el.content.innerHTML = `
       ${this.monthCalendar(index, first)}
-      ${this.legend(dataDays.length ? `${goodDays} of ${dataDays.length} days with good air` : 'No measurements this month')}`;
+      ${this.legend(dataDays.length ? t('{good} of {total} days with good air', { good: goodDays, total: dataDays.length }) : t('No measurements this month'))}`;
     this.renderPeriodChart(days);
     this.renderCoach(agg, null, 'month', { compare: this.comparison(index, agg, index.range(addMonths(first, -1), first), 'month', first, next) });
   }
@@ -1060,14 +1065,14 @@ export class InsightsView {
     const sep = (i) => (monthStarts.has(i) ? ' month-start' : '');
     const rows = (schedule ? DAY_ORDER : []).map(p => `
       <tr><th class="row-head"><i class="bi ${PHASES[p].icon}" style="color:${PHASES[p].color}"></i> ${PHASES[p].name}</th>
-        ${weeks.map((w, i) => { const l = w.agg.phases[p].level(); return `<td class="week-cell${sep(i)} ${l === null ? 'empty' : ''}" data-week="${isoDate(w.date)}" ${l === null ? '' : `style="--level:${LEVELS[l].color}"`} title="Week of ${w.label}${l === null ? '' : ` · ${PHASES[p].name}: ${LEVELS[l].name}`}"></td>`; }).join('')}
+        ${weeks.map((w, i) => { const l = w.agg.phases[p].level(); return `<td class="week-cell${sep(i)} ${l === null ? 'empty' : ''}" data-week="${isoDate(w.date)}" ${l === null ? '' : `style="--level:${LEVELS[l].color}"`} title="${t('Week of {date}', { date: w.label })}${l === null ? '' : ` · ${PHASES[p].name}: ${LEVELS[l].name}`}"></td>`; }).join('')}
       </tr>`).join('');
     const dayRow = `
-      <tr class="day-row"><th class="row-head"><i class="bi bi-sun me-1"></i>Whole day</th>
-        ${weeks.map((w, i) => { const l = w.agg.stats.level(); return `<td class="week-cell${sep(i)} ${l === null ? 'empty' : ''}" data-week="${isoDate(w.date)}" ${l === null ? '' : `style="--level:${LEVELS[l].color}"`} title="Week of ${w.label}${l === null ? '' : ` · ${LEVELS[l].name}`}"></td>`; }).join('')}
+      <tr class="day-row"><th class="row-head"><i class="bi bi-sun me-1"></i>${t('Whole day')}</th>
+        ${weeks.map((w, i) => { const l = w.agg.stats.level(); return `<td class="week-cell${sep(i)} ${l === null ? 'empty' : ''}" data-week="${isoDate(w.date)}" ${l === null ? '' : `style="--level:${LEVELS[l].color}"`} title="${t('Week of {date}', { date: w.label })}${l === null ? '' : ` · ${LEVELS[l].name}`}"></td>`; }).join('')}
       </tr>`;
     const doneRow = `
-      <tr><th class="row-head"><i class="bi bi-check2-circle me-1"></i>Done</th>
+      <tr><th class="row-head"><i class="bi bi-check2-circle me-1"></i>${t('Done')}</th>
         ${weeks.map((w, i) => { const n = w.agg.care.filter(e => e.answer === 'done').length; return `<td class="week-count${sep(i)}">${n || ''}</td>`; }).join('')}
       </tr>`;
     const months = [];
@@ -1078,16 +1083,16 @@ export class InsightsView {
     const dataDays = [...index.days.values()].filter(d => d.date >= first && d.date < next && !d.stats.empty);
     const goodDays = dataDays.filter(d => d.stats.level() === 0).length;
     this.el.content.innerHTML = `
-      <h6 class="fw-semibold mb-2">By week</h6>
+      <h6 class="fw-semibold mb-2">${t('By week')}</h6>
       <div class="table-responsive">
         <table class="weeks-grid">
           <thead><tr><th></th>${monthHeads.map((m, i) => `<th colspan="${m.span}" class="${i > 0 ? 'month-start' : ''}">${m.name}</th>`).join('')}</tr></thead>
           <tbody>${rows}${dayRow}${doneRow}</tbody>
         </table>
       </div>
-      <h6 class="fw-semibold mt-3 mb-2">By day</h6>
+      <h6 class="fw-semibold mt-3 mb-2">${t('By day')}</h6>
       <div class="mini-months">${months.join('')}</div>
-      ${this.legend(dataDays.length ? `${goodDays} of ${dataDays.length} days with good air · click a week or day to open it` : 'No measurements in these months')}`;
+      ${this.legend(dataDays.length ? t('{good} of {total} days with good air · click a week or day to open it', { good: goodDays, total: dataDays.length }) : t('No measurements in these months'))}`;
     this.renderPeriodChart(weeks);
     this.renderCoach(agg, null, '6 months', { compare: this.comparison(index, agg, index.range(addMonths(first, -6), first), '6 months', first, next) });
   }

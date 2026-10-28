@@ -1,7 +1,7 @@
 {
   "name": "odak-gui",
   "productName": "Mountain Labs",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Desktop application for ODAK Air Quality Monitoring devices",
   "main": "src/index.js",
   "scripts": {

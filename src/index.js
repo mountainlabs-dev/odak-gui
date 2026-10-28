@@ -8,6 +8,7 @@ const { spawn } = require('child_process');
 const { flashLinux } = require('./linux-flash');
 const { flashMac } = require('./mac-flash');
 const firmwareUpdates = require('./firmware-updates');
+const i18n = require('./main-i18n');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (require('electron-squirrel-startup')) {
@@ -37,6 +38,21 @@ let loggingEnabled = false;
 let logFilePath = null;
 let portRefreshInterval;
 let inDataDump = false; // between DATA_BEGIN and DATA_END of a history download
+let uiLang = null;        // 'en' | 'tr', as chosen in the window; null until it tells us
+
+/** The interface language: the window's choice, else the system's. */
+function language() {
+  return uiLang || (app.getLocale().toLowerCase().startsWith('tr') ? 'tr' : 'en');
+}
+const tm = (text) => i18n.translate(language(), text);
+
+/** Send flasher output to the window line by line, translated and tagged with its stage. */
+function sendFirmwareProgress(output) {
+  for (const line of String(output).split('\n')) {
+    if (!line.trim()) continue;
+    mainWindow.webContents.send('firmware-progress', { message: tm(line.trim()), stage: i18n.progressStage(line) });
+  }
+}
 
 // Create the main window
 const createWindow = () => {
@@ -101,7 +117,7 @@ function showAboutWindow() {
     maximizable: false,
     parent: mainWindow,
     modal: process.platform !== 'darwin',
-    title: 'About Mountain Labs',
+    title: tm('About Mountain Labs'),
     icon: path.join(__dirname, '../assets/icons', 'odak.png'),
     webPreferences: {
       contextIsolation: true,
@@ -110,7 +126,7 @@ function showAboutWindow() {
   });
   aboutWindow.removeMenu();
   openLinksExternally(aboutWindow);
-  aboutWindow.loadFile(path.join(__dirname, 'about.html'), { query: { version: app.getVersion() } });
+  aboutWindow.loadFile(path.join(__dirname, 'about.html'), { query: { version: app.getVersion(), lang: language() } });
   aboutWindow.on('closed', () => {
     aboutWindow = null;
   });
@@ -118,22 +134,52 @@ function showAboutWindow() {
 
 function createMenu() {
   const isMac = process.platform === 'darwin';
+  const item = (role, label) => ({ role, label: tm(label) });
+  const sep = { type: 'separator' };
   const template = [
-    ...(isMac ? [{ role: 'appMenu' }] : []),
-    { role: 'fileMenu' },
-    { role: 'editMenu' },
-    { role: 'viewMenu' },
-    { role: 'windowMenu' },
+    ...(isMac ? [{
+      label: app.name,
+      submenu: [
+        { label: tm('About Mountain Labs'), click: showAboutWindow },
+        sep,
+        item('services', 'Services'),
+        sep,
+        item('hide', 'Hide Mountain Labs'),
+        item('hideOthers', 'Hide Others'),
+        item('unhide', 'Show All'),
+        sep,
+        item('quit', 'Quit Mountain Labs'),
+      ],
+    }] : []),
+    { label: tm('File'), submenu: [isMac ? item('close', 'Close Window') : item('quit', 'Quit')] },
     {
+      label: tm('Edit'),
+      submenu: [item('undo', 'Undo'), item('redo', 'Redo'), sep, item('cut', 'Cut'), item('copy', 'Copy'), item('paste', 'Paste'), item('selectAll', 'Select All')],
+    },
+    {
+      label: tm('View'),
+      submenu: [
+        item('reload', 'Reload'), item('forceReload', 'Force Reload'), item('toggleDevTools', 'Toggle Developer Tools'), sep,
+        item('resetZoom', 'Actual Size'), item('zoomIn', 'Zoom In'), item('zoomOut', 'Zoom Out'), sep,
+        item('togglefullscreen', 'Toggle Full Screen'),
+      ],
+    },
+    {
+      label: tm('Window'),
+      role: 'window',
+      submenu: [item('minimize', 'Minimize'), ...(isMac ? [item('zoom', 'Zoom'), sep, item('front', 'Bring All to Front')] : [item('close', 'Close')])],
+    },
+    {
+      label: tm('Help'),
       role: 'help',
       submenu: [
         {
-          label: 'Mountain Labs Website',
+          label: tm('Mountain Labs Website'),
           click: () => shell.openExternal('https://mountainlabs.io'),
         },
-        { type: 'separator' },
+        sep,
         {
-          label: 'About Mountain Labs',
+          label: tm('About Mountain Labs'),
           click: showAboutWindow,
         },
       ],
@@ -141,6 +187,13 @@ function createMenu() {
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
+
+// The window reports its language at start-up and after the user changes it
+ipcMain.on('set-language', (event, lang) => {
+  if (lang !== 'en' && lang !== 'tr') return;
+  uiLang = lang;
+  createMenu();
+});
 
 // Start application when ready
 app.on('ready', () => {
@@ -194,7 +247,7 @@ async function listSerialPorts() {
   } catch (error) {
     console.error('Error listing ports:', error);
     if (mainWindow) {
-      mainWindow.webContents.send('error', { message: 'Failed to list serial ports', details: error.message });
+      mainWindow.webContents.send('error', { message: tm('Failed to list serial ports'), details: error.message });
     }
   }
 }
@@ -253,7 +306,7 @@ ipcMain.handle('connect-port', async (event, portConfig) => {
     serialConnection.on('error', (err) => {
       console.error('Serial port error:', err);
       const details = isLinuxPermissionError(err) ? linuxSerialPermissionMessage(portConfig.path) : err.message;
-      mainWindow.webContents.send('error', { message: 'Serial port error', details });
+      mainWindow.webContents.send('error', { message: tm('Serial port error'), details });
     });
     
     parser.on('data', (data) => {
@@ -301,7 +354,7 @@ ipcMain.handle('disconnect-port', async () => {
 ipcMain.handle('send-command', async (event, command) => {
   try {
     if (!serialConnection || !serialConnection.isOpen) {
-      return { success: false, error: 'Not connected to device' };
+      return { success: false, error: tm('Not connected to device') };
     }
     
     await new Promise((resolve, reject) => {
@@ -332,8 +385,8 @@ ipcMain.handle('select-log-file', async () => {
   try {
     const result = await dialog.showSaveDialog({
       filters: [
-        { name: 'JSON Files', extensions: ['json'] },
-        { name: 'CSV Files', extensions: ['csv'] },
+        { name: tm('JSON Files'), extensions: ['json'] },
+        { name: tm('CSV Files'), extensions: ['csv'] },
       ],
       properties: ['createDirectory']
     });
@@ -359,7 +412,7 @@ ipcMain.handle('select-firmware-file', async () => {
   try {
     const result = await dialog.showOpenDialog({
       filters: [
-        { name: 'UF2 Files', extensions: ['uf2'] }
+        { name: tm('UF2 Files'), extensions: ['uf2'] }
       ],
       properties: ['openFile']
     });
@@ -390,7 +443,7 @@ ipcMain.handle('firmware-download', async (event, board) => {
   try {
     const boards = await firmwareUpdates.getManifest();
     const entry = boards[board];
-    if (!entry) return { success: false, error: `No firmware is published for board ${board}.` };
+    if (!entry) return { success: false, error: tm(`No firmware is published for board ${board}.`) };
     const dir = path.join(app.getPath('userData'), 'firmware');
     const file = await firmwareUpdates.downloadFirmware(entry, dir, (received, total) => {
       mainWindow.webContents.send('firmware-download-progress', { received, total });
@@ -398,7 +451,7 @@ ipcMain.handle('firmware-download', async (event, board) => {
     return { success: true, path: file, version: entry.version };
   } catch (error) {
     console.error('Firmware download error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: tm(error.message) };
   }
 });
 
@@ -420,11 +473,11 @@ ipcMain.handle('update-firmware', async (event, options) => {
         await flashLinux({
           portPath: comPort,
           firmwarePath: options.firmwarePath,
-          progress: (message) => mainWindow.webContents.send('firmware-progress', { message }),
+          progress: sendFirmwareProgress,
         });
         return { success: true };
       } catch (error) {
-        const message = error.code === 'permission' ? linuxSerialPermissionMessage(comPort) : error.message;
+        const message = error.code === 'permission' ? linuxSerialPermissionMessage(comPort) : tm(error.message);
         return { success: false, error: message };
       }
     } else if (process.mas) {
@@ -433,12 +486,12 @@ ipcMain.handle('update-firmware', async (event, options) => {
         await flashMac({
           portPath: comPort,
           firmwarePath: options.firmwarePath,
-          progress: (message) => mainWindow.webContents.send('firmware-progress', { message }),
+          progress: sendFirmwareProgress,
           chooseDrive: async (defaultPath) => {
             const result = await dialog.showOpenDialog(mainWindow, {
-              title: 'Choose the RPI-RP2 drive',
-              message: 'Odak is in update mode. Choose the RPI-RP2 drive to install the firmware.',
-              buttonLabel: 'Install Firmware',
+              title: tm('Choose the RPI-RP2 drive'),
+              message: tm('Odak is in update mode. Choose the RPI-RP2 drive to install the firmware.'),
+              buttonLabel: tm('Install Firmware'),
               defaultPath,
               properties: ['openDirectory'],
             });
@@ -447,7 +500,7 @@ ipcMain.handle('update-firmware', async (event, options) => {
         });
         return { success: true };
       } catch (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: tm(error.message) };
       }
     } else if (process.platform === 'darwin') {
       // macOS: Use the flash.sh script from the scripts folder, extracted to temp if in ASAR
@@ -480,7 +533,7 @@ ipcMain.handle('update-firmware', async (event, options) => {
         bash.stdout.on('data', (data) => {
           const output = data.toString();
           stdout += output;
-          mainWindow.webContents.send('firmware-progress', { message: output });
+          sendFirmwareProgress(output);
         });
         
         bash.stderr.on('data', (data) => {
@@ -498,14 +551,14 @@ ipcMain.handle('update-firmware', async (event, options) => {
             const fdaMsg = stdout.match(/=+ PERMISSION ERROR =+[\s\S]*?=+/);
             resolve({
               success: false,
-              error: fdaMsg ? fdaMsg[0] : 'macOS Full Disk Access is required.\n\nTo grant access:\n1. Open System Settings > Privacy & Security > Full Disk Access.\n2. Add and enable this app (or your Terminal if running from CLI).\n3. Restart the app and try again.'
+              error: fdaMsg ? fdaMsg[0] : tm('macOS Full Disk Access is required.\n\nTo grant access:\n1. Open System Settings > Privacy & Security > Full Disk Access.\n2. Add and enable this app (or your Terminal if running from CLI).\n3. Restart the app and try again.')
             });
           } else if (code === 12) {
             // Exit code 12: Copy timeout
             const timeoutMsg = stdout.match(/=+ COPY (TIMEOUT|FAILED) =+[\s\S]*?=+/);
             resolve({
               success: false,
-              error: timeoutMsg ? timeoutMsg[0] : 'Copying the firmware file timed out. Please check the Odak connection and try again.'
+              error: timeoutMsg ? timeoutMsg[0] : tm('Copying the firmware file timed out. Please check the Odak connection and try again.')
             });
           } else {
             reject(new Error(stderr || stdout || `Process exited with code ${code}`));
@@ -557,7 +610,7 @@ ipcMain.handle('update-firmware', async (event, options) => {
         ps.stdout.on('data', (data) => {
           const output = data.toString();
           stdout += output;
-          mainWindow.webContents.send('firmware-progress', { message: output });
+          sendFirmwareProgress(output);
         });
         
         ps.stderr.on('data', (data) => {
@@ -583,7 +636,7 @@ ipcMain.handle('update-firmware', async (event, options) => {
     }
   } catch (error) {
     console.error('Firmware update error:', error);
-    return { success: false, error: error.message || 'Unknown error during firmware update' };
+    return { success: false, error: tm(error.message) || 'Unknown error during firmware update' };
   }
 });
 
@@ -592,11 +645,11 @@ ipcMain.handle('update-firmware', async (event, options) => {
 ipcMain.handle('save-history', async (event, history) => {
   try {
     const result = await dialog.showSaveDialog({
-      title: 'Save Device History',
+      title: tm('Save Device History'),
       defaultPath: `ODAK_History_${new Date().toISOString().replace(/:/g, '-').substring(0, 19)}.csv`,
       filters: [
-        { name: 'CSV Files', extensions: ['csv'] },
-        { name: 'JSON Files', extensions: ['json'] }
+        { name: tm('CSV Files'), extensions: ['csv'] },
+        { name: tm('JSON Files'), extensions: ['json'] }
       ],
       properties: ['createDirectory']
     });
@@ -661,9 +714,9 @@ ipcMain.handle('history-cache-save', async (event, cache) => {
 ipcMain.handle('save-backup', async (event, backup) => {
   try {
     const result = await dialog.showSaveDialog({
-      title: 'Export Odak Backup',
+      title: tm('Export Odak Backup'),
       defaultPath: `Odak_Backup_${new Date().toISOString().substring(0, 10)}.json`,
-      filters: [{ name: 'Odak Backup', extensions: ['json'] }],
+      filters: [{ name: tm('Odak Backup'), extensions: ['json'] }],
       properties: ['createDirectory']
     });
     if (result.canceled || !result.filePath) return { success: false, canceled: true };
@@ -679,8 +732,8 @@ ipcMain.handle('save-backup', async (event, backup) => {
 ipcMain.handle('open-history-file', async () => {
   try {
     const result = await dialog.showOpenDialog({
-      title: 'Import Odak Backup or History',
-      filters: [{ name: 'Odak Backup or History', extensions: ['json', 'csv'] }],
+      title: tm('Import Odak Backup or History'),
+      filters: [{ name: tm('Odak Backup or History'), extensions: ['json', 'csv'] }],
       properties: ['openFile']
     });
     if (result.canceled || result.filePaths.length === 0) return { success: false, canceled: true };
@@ -697,10 +750,10 @@ ipcMain.handle('open-history-file', async () => {
 ipcMain.handle('export-console-output', async (event, content) => {
   try {
     const result = await dialog.showSaveDialog({
-      title: 'Export Console Output',
+      title: tm('Export Console Output'),
       filters: [
-        { name: 'Text Files', extensions: ['txt'] },
-        { name: 'HTML Files', extensions: ['html'] }
+        { name: tm('Text Files'), extensions: ['txt'] },
+        { name: tm('HTML Files'), extensions: ['html'] }
       ],
       defaultPath: `ODAK_Console_${new Date().toISOString().replace(/:/g, '-').substring(0, 19)}.txt`,
       properties: ['createDirectory']
@@ -726,12 +779,7 @@ function isLinuxPermissionError(err) {
 
 function linuxSerialPermissionMessage(port) {
   // Inside the snap, USB access is an interface the user may have to connect first
-  const snapStep = process.env.SNAP
-    ? 'Allow Odak to use USB devices:\n    sudo snap connect odak-gui:raw-usb\n\nThen add'
-    : 'Add';
-  return `No permission to access ${port || 'the serial port'}.\n\n` +
-    `${snapStep} your user to the "dialout" group, then log out and back in:\n` +
-    '    sudo usermod -aG dialout $USER';
+  return i18n.linuxSerialPermissionMessage(language(), port, !!process.env.SNAP);
 }
 
 function logData(data) {
@@ -771,7 +819,7 @@ function logData(data) {
     console.error('Data logging error:', error);
     // Notify renderer about logging error
     if (mainWindow) {
-      mainWindow.webContents.send('error', { message: 'Data logging error', details: error.message });
+      mainWindow.webContents.send('error', { message: tm('Data logging error'), details: error.message });
     }
   }
 }
