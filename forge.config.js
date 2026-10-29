@@ -56,8 +56,11 @@ const masPackagerConfig = isMas ? {
     provisioningProfile: macStore.provisioningProfile,
     // Fail the build instead of quietly producing an unsigned app the App Store rejects
     continueOnError: false,
-    // The app gets the sandbox entitlements; helpers, frameworks and native modules inherit them
+    // The app gets the sandbox entitlements; helpers, frameworks and native modules inherit them.
+    // No hardened runtime: osx-sign turns it on by default, and under it V8 may not create JIT code
+    // (no allow-jit entitlement), so the app crashed at launch. The App Store sandbox replaces it.
     optionsForFile: (filePath) => ({
+      hardenedRuntime: false,
       entitlements: filePath.endsWith(`${productName}.app`)
         ? path.join(__dirname, 'packaging/macos/entitlements.mas.plist')
         : path.join(__dirname, 'packaging/macos/entitlements.mas.child.plist'),
