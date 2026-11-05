@@ -2,21 +2,21 @@
   "boards": {
     "v2": {
       "name": "New board",
-      "version": "2.9.6",
-      "date": "2026-10-24",
-      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v2-2.9.6/odak-v2-2.9.6.uf2",
-      "sha256": "c648a1cbd74c6e2bd906dc5c7cb40b722454bdd82108392104875e7a4e9930a7",
-      "notes": "Shows its full version number (v2.9.6), so the app stops offering the same update again\nMeasurements no longer stop until a button is pressed\nThis month page (weeks of the current month) instead of Last 2 months\nAir Coach action cards, My day / This week pages, setup steps",
-      "notes_tr": "Tam sürüm numarasını (v2.9.6) gösterir; böylece uygulama aynı güncellemeyi tekrar önermez\nÖlçümler artık bir düğmeye basılana kadar durmaz\nSon 2 ay yerine Bu ay sayfası (bu ayın haftaları)\nHava Koçu öneri kartları, Günüm / Bu hafta sayfaları, kurulum adımları"
+      "version": "2.9.8",
+      "date": "2026-11-05",
+      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v2-2.9.8/odak-v2-2.9.8.uf2",
+      "sha256": "f731c639c20f88f376c6befab6957133a97563c734e058afcebf296f29ebfa52",
+      "notes": "New Noto Sans font on every screen, with proper Turkish characters\nAQI now uses PM2.5 only, on the 2024 US EPA scale\nHome page shows the worst reading and names it; bigger numbers on the all-in-one page\nLast 24 hours page shows CO2, VOC and PM together on a timeline\nSimpler setup with a button guide; the date is set digit by digit\nHealth scores page lists its scientific references\nScreen and sensor waits can no longer hang the device; battery cut-off is 3.30 V",
+      "notes_tr": "Tüm ekranlarda yeni Noto Sans yazı tipi ve doğru Türkçe karakterler\nAQI artık yalnızca PM2.5 kullanır (2024 ABD EPA ölçeği)\nAna sayfa en kötü ölçümü adıyla gösterir; tümü bir arada sayfasında rakamlar daha büyük\nSon 24 Saat sayfası CO2, VOC ve PM değerlerini aynı zaman çizelgesinde gösterir\nDüğme rehberiyle daha kolay kurulum; tarih basamak basamak ayarlanır\nSağlık puanları sayfasında bilimsel kaynaklar listelenir\nEkran ve sensör beklemeleri artık cihazı kilitleyemez; pil kesme eşiği 3,30 V"
     },
     "v1": {
       "name": "Original board",
-      "version": "1.7.1",
-      "date": "2026-10-24",
-      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v1-1.7.1/odak-v1-1.7.1.uf2",
-      "sha256": "e2b4712706be395075430a2b8e87de683625cec6697068930848d6d1709cdde9",
-      "notes": "Original board: day parts and new pages (My day, This week, This month), Air Coach action cards\nSetup asks your priorities, date & time and daily plan; real clock and a long-term data log\nVOC from Bosch BSEC 3.3 (low-power mode) in ppm; CO2 averaged over 8 readings with pressure correction\nNew charging icon; Tracking page as on the new board\nMeasurements no longer stop until a button is pressed",
-      "notes_tr": "İlk kart: gün bölümleri ve yeni sayfalar (Günüm, Bu hafta, Bu ay), Hava Koçu öneri kartları\nKurulumda öncelikleriniz, tarih ve saat ile günlük planınız sorulur; gerçek saat ve uzun süreli veri kaydı\nBosch BSEC 3.3 ile VOC (düşük güç modu) ppm cinsinden; CO2, basınç düzeltmesiyle 8 ölçümün ortalaması\nYeni şarj simgesi; yeni karttaki gibi İzleme sayfası\nÖlçümler artık bir düğmeye basılana kadar durmaz"
+      "version": "1.7.4",
+      "date": "2026-11-05",
+      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v1-1.7.4/odak-v1-1.7.4.uf2",
+      "sha256": "f218e69ef7e9c2f229bf3bd8e81b867b3bfc4309c1652c33f03a19e220d59574",
+      "notes": "New Noto Sans font on every screen, with proper Turkish characters\nAQI now uses PM2.5 only, on the 2024 US EPA scale\nHome page shows the worst reading and names it; bigger numbers on the all-in-one page\nLast 24 hours page shows CO2, VOC and PM together on a timeline\nSimpler setup with a button guide; the date is set digit by digit\nHealth scores page lists its scientific references\nScreen and sensor waits can no longer hang the device; battery cut-off is 3.30 V",
+      "notes_tr": "Tüm ekranlarda yeni Noto Sans yazı tipi ve doğru Türkçe karakterler\nAQI artık yalnızca PM2.5 kullanır (2024 ABD EPA ölçeği)\nAna sayfa en kötü ölçümü adıyla gösterir; tümü bir arada sayfasında rakamlar daha büyük\nSon 24 Saat sayfası CO2, VOC ve PM değerlerini aynı zaman çizelgesinde gösterir\nDüğme rehberiyle daha kolay kurulum; tarih basamak basamak ayarlanır\nSağlık puanları sayfasında bilimsel kaynaklar listelenir\nEkran ve sensör beklemeleri artık cihazı kilitleyemez; pil kesme eşiği 3,30 V"
     }
   }
 }
