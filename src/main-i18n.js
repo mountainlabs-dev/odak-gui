@@ -84,6 +84,7 @@ const PATTERNS = [
   [/^Choose the (\S+) drive so the app can copy the firmware onto it\.$/,
     'Uygulamanın yazılımı kopyalayabilmesi için $1 sürücüsünü seçin.'],
   [/^Copying flash file to Odak \((.+)\)\.\.\.$/, 'Yazılım dosyası Odak\'a kopyalanıyor ($1)...'],
+  [/^Copying the firmware to (.+) failed: timed out after (\d+) s$/, 'Yazılım $1 konumuna kopyalanamadı: $2 sn sonra zaman aşımı'],
   [/^Copying the firmware to (.+) failed: (.+)$/, 'Yazılım $1 konumuna kopyalanamadı: $2'],
   [/^(.+) is not the (\S+) drive\. Try again and choose \S+ in the sidebar\.$/,
     '$1, $2 sürücüsü değil. Tekrar deneyin ve kenar çubuğunda $2 sürücüsünü seçin.'],

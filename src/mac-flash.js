@@ -8,13 +8,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const { resetToBootloader, FlashError } = require('./linux-flash');
+const { resetToBootloader, copyToDrive, FlashError } = require('./linux-flash');
 
 const LABEL = 'RPI-RP2';
 const DEFAULT_DRIVE = path.join('/Volumes', LABEL);
 const MOUNT_WAIT_MS = 8000;          // Finder mounts the drive a few seconds after the reset
-const COPY_TIMEOUT_MS = 20000;
-const REBOOT_TIMEOUT_MS = 15000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const isBootloaderDrive = (dir) => fs.existsSync(path.join(dir, 'INFO_UF2.TXT'));
@@ -49,23 +47,7 @@ async function flashMac({ portPath, firmwarePath, progress, chooseDrive }) {
   }
 
   progress(`Copying flash file to Odak (${drive})...`);
-  const target = path.join(drive, path.basename(firmwarePath));
-  try {
-    await Promise.race([
-      fs.promises.copyFile(firmwarePath, target),
-      sleep(COPY_TIMEOUT_MS).then(() => { throw new Error(`timed out after ${COPY_TIMEOUT_MS / 1000} s`); }),
-    ]);
-  } catch (err) {
-    // Odak restarts as soon as it has the whole image, which can fail the end of the copy
-    if (isBootloaderDrive(drive)) throw new FlashError(`Copying the firmware to ${drive} failed: ${err.message}`, 'copy');
-  }
-
-  // The drive disappears when Odak restarts with the new firmware
-  const copied = Date.now();
-  while (isBootloaderDrive(drive) && Date.now() - copied < REBOOT_TIMEOUT_MS) await sleep(500);
-  if (isBootloaderDrive(drive)) {
-    throw new FlashError(`Odak was reset but did not take the firmware. Drag the .uf2 file onto the ${LABEL} drive yourself.`, 'not-flashed');
-  }
+  await copyToDrive({ firmwarePath, drive, isDrive: () => isBootloaderDrive(drive) });
   progress('Flash successful');
 }
 

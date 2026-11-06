@@ -56,7 +56,7 @@ sleep 5
 
 # Copy flash file to Odak with timeout
 CP_LOG="/tmp/cp_error_$$.log"
-COPY_TIMEOUT=20  # seconds
+COPY_TIMEOUT=180  # seconds; the bootloader takes about a minute to write 1.3 MB
 
 copy_with_timeout() {
     command="$1"

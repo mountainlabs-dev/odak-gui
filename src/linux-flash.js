@@ -18,8 +18,10 @@ const LABEL = 'RPI-RP2';
 const BOOTLOADER_BAUD = 1200;
 const MOUNT_TIMEOUT_MS = 60000;      // includes time for the user to open the drive themselves
 const UDISKS_AFTER_MS = 6000;        // give the desktop this long to mount it before asking udisks
-const COPY_TIMEOUT_MS = 20000;
-const REBOOT_TIMEOUT_MS = 15000;
+// The bootloader takes about a minute to write a 1.3 MB image over USB; these limits are only for
+// a device that has really stopped. The system can still be writing after the copy returns.
+const COPY_TIMEOUT_MS = 180000;
+const REBOOT_TIMEOUT_MS = 60000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -78,6 +80,36 @@ function mountWithUdisks() {
 }
 
 /**
+ * Copy the .uf2 file onto the bootloader drive and wait for Odak to restart. The drive going away
+ * is what proves it worked: Odak restarts as soon as it has the whole image, which can fail or hang
+ * the end of the copy. `isDrive()` says whether the drive is still there.
+ */
+async function copyToDrive({
+  firmwarePath, drive, isDrive, copy = fs.promises.copyFile,
+  copyTimeoutMs = COPY_TIMEOUT_MS, rebootTimeoutMs = REBOOT_TIMEOUT_MS,
+}) {
+  let finished = false;
+  let failure = null;
+  copy(firmwarePath, path.join(drive, path.basename(firmwarePath))).then(
+    () => { finished = true; },
+    (err) => { finished = true; failure = err; },
+  );
+  const started = Date.now();
+  while (!finished && isDrive() && Date.now() - started < copyTimeoutMs) await sleep(500);
+  if (!isDrive()) return;
+  if (failure) throw new FlashError(`Copying the firmware to ${drive} failed: ${failure.message}`, 'copy');
+  if (!finished) {
+    throw new FlashError(`Copying the firmware to ${drive} failed: timed out after ${copyTimeoutMs / 1000} s`, 'copy');
+  }
+
+  const copied = Date.now();
+  while (isDrive() && Date.now() - copied < rebootTimeoutMs) await sleep(500);
+  if (isDrive()) {
+    throw new FlashError(`Odak was reset but did not take the firmware. Drag the .uf2 file onto the ${LABEL} drive yourself.`, 'not-flashed');
+  }
+}
+
+/**
  * Flash `firmwarePath` onto Odak. `portPath` may be null when the device is already in
  * bootloader mode (BOOTSEL held while plugging in). `progress(message)` reports each step
  * with the words the firmware tab listens for (Resetting / Waiting / Copying / Flash successful).
@@ -119,24 +151,8 @@ async function flashLinux({ portPath, firmwarePath, progress, roots = mediaRoots
   }
 
   progress(`Copying flash file to Odak (${drive})...`);
-  const target = path.join(drive, path.basename(firmwarePath));
-  try {
-    await Promise.race([
-      fs.promises.copyFile(firmwarePath, target),
-      sleep(COPY_TIMEOUT_MS).then(() => { throw new Error(`timed out after ${COPY_TIMEOUT_MS / 1000} s`); }),
-    ]);
-  } catch (err) {
-    // Odak restarts as soon as it has the whole image, which can fail the end of the copy
-    if (fs.existsSync(drive)) throw new FlashError(`Copying the firmware to ${drive} failed: ${err.message}`, 'copy');
-  }
-
-  // The drive disappears when Odak restarts with the new firmware
-  const copied = Date.now();
-  while (findBootloaderDrive(roots) && Date.now() - copied < REBOOT_TIMEOUT_MS) await sleep(500);
-  if (findBootloaderDrive(roots)) {
-    throw new FlashError('Odak was reset but did not take the firmware. Drag the .uf2 file onto the RPI-RP2 drive yourself.', 'not-flashed');
-  }
+  await copyToDrive({ firmwarePath, drive, isDrive: () => !!findBootloaderDrive(roots) });
   progress('Flash successful');
 }
 
-module.exports = { flashLinux, findBootloaderDrive, resetToBootloader, FlashError };
+module.exports = { flashLinux, findBootloaderDrive, resetToBootloader, copyToDrive, FlashError };
