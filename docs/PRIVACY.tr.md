@@ -2,7 +2,7 @@
 
 *English: [PRIVACY.md](PRIVACY.md)*
 
-Son güncelleme: 28 Ekim 2026
+Son güncelleme: 6 Kasım 2026
 
 Bu politika, Mountain Labs Teknoloji AŞ'nin ("Mountain Labs") Odak hava kalitesi monitörü için
 geliştirdiği Mountain Labs masaüstü uygulamasını (önceki adıyla *Odak Air Quality Monitor*) kapsar:
@@ -20,14 +20,17 @@ kalır:
   yalnızca seçtiğiniz yere kaydedilir.
 - **Planınız ve öncelikleriniz** (günlük plan; alerji / enfeksiyon / yorgunluk / odak) Odak
   cihazınızda ve bilgisayarınızdaki uygulamada saklanır.
-- **Ayarlarınız** (arayüz dili, kart türü, saatin otomatik ayarlanması) bilgisayarınızdaki
-  uygulamada saklanır.
+- **Ayarlarınız** (arayüz dili, kart türü, saatin otomatik ayarlanması), girerseniz **adınız** ve
+  **cihazlarınıza verdiğiniz adlar** bilgisayarınızdaki uygulamada saklanır.
+- Uygulama, cihazlarınızı ayırt etmek için her Odak'ın USB seri numarasını verileriyle birlikte
+  bilgisayarınızda saklar.
 
 ## Uygulamanın yapmadıkları
 
 - Mountain Labs'e veya başka birine hiçbir veri göndermez.
 - Analiz, hata raporlama, reklam veya izleme araçları kullanmaz.
-- Hesap oluşturmaz ve kişisel bilgi istemez.
+- Hesap oluşturmaz. İstediği tek kişisel bilgi adınızdır; bu isteğe bağlıdır ve bilgisayarınızda
+  kalır.
 - İnternete yalnızca Odak yazılım güncellemelerini denetlemek ve indirmek için bağlanır: yazılım
   listesini okur ve siz bir güncellemeyi onayladığınızda yazılım dosyasını Mountain Labs'in
   GitHub'daki yayın sayfasından indirir. Bu istekler kişisel veri veya cihaz verisi içermez; her

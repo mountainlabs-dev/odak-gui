@@ -17,6 +17,16 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <!-- Splash: shown until the history is loaded (see renderer.js) -->
+  <div id="splash" class="splash" aria-hidden="true">
+    <div class="splash-center">
+      <div class="splash-mark"><img src="../assets/icons/odak.png" alt=""></div>
+      <div class="splash-name">Mountain Labs</div>
+      <div id="splash-greeting" class="splash-greeting">Clean air, better days</div>
+      <div class="splash-line"><span></span></div>
+    </div>
+  </div>
+
   <!-- Header -->
   <header class="bg-white text-dark py-2">
     <div class="container-fluid">
@@ -27,6 +37,9 @@
           <span class="ms-2 text-muted small">Odak Air Quality Monitor</span>
         </div>
         <div class="col text-end">
+          <button id="user-btn" class="btn btn-sm btn-light border me-2 align-middle" title="Your name">
+            <i class="bi bi-person"></i> <span id="user-name"></span>
+          </button>
           <select id="lang-select" class="form-select form-select-sm d-inline-block w-auto me-3 align-middle" aria-label="Language">
             <option value="en">English</option>
             <option value="tr">Türkçe</option>
@@ -65,6 +78,10 @@
             </div>
             <table class="table table-sm small mb-0 readings-table">
               <tbody>
+                <tr><th>Device</th><td>
+                  <span id="info-device">--</span>
+                  <button id="device-rename-btn" class="btn btn-link btn-sm p-0 ms-1 d-none" title="Rename this device"><i class="bi bi-pencil"></i></button>
+                </td></tr>
                 <tr><th>Firmware</th><td id="info-firmware">--</td></tr>
                 <tr><th>Battery</th><td id="info-battery-v">--</td></tr>
               </tbody>
@@ -352,59 +369,66 @@
           <!-- Insights Tab: history stored on the device, by day / week / month -->
           <div class="tab-pane fade" id="insights" role="tabpanel">
             <div id="ins-drop" class="ins-drop d-none"><i class="bi bi-box-arrow-in-down"></i> Drop to import</div>
-            <div class="card">
-              <div class="card-header d-flex flex-wrap align-items-center gap-2">
-                <span><i class="bi bi-bar-chart-line me-1"></i> Air Quality Insights</span>
-                <span id="ins-data-info" class="small text-muted fw-normal ms-2"></span>
-                <div class="ms-auto d-flex gap-2">
-                  <button id="ins-open-btn" class="btn btn-sm btn-outline-secondary" title="Import an Odak backup or a saved CSV / JSON history (or drop the file here)">
-                    <i class="bi bi-box-arrow-in-down me-1"></i> Import
-                  </button>
-                  <button id="ins-export-btn" class="btn btn-sm btn-outline-secondary" title="Save a backup with all measurements, Air Coach history and your plan" disabled>
-                    <i class="bi bi-box-arrow-up me-1"></i> Export backup
-                  </button>
-                  <button id="ins-sync-btn" class="btn btn-sm btn-primary" disabled>
-                    <i class="bi bi-arrow-repeat me-1"></i> Sync from device
-                  </button>
-                </div>
+
+            <div class="ins-bar">
+              <div class="btn-group" role="group" aria-label="Period">
+                <button class="btn btn-sm btn-outline-primary active" data-view="day">Day</button>
+                <button class="btn btn-sm btn-outline-primary" data-view="week">Week</button>
+                <button class="btn btn-sm btn-outline-primary" data-view="month">Month</button>
+                <button class="btn btn-sm btn-outline-primary" data-view="sixmonths">6 Months</button>
               </div>
-              <div class="card-body">
-                <div class="progress mb-2 d-none" id="ins-progress-container" style="height: 4px;">
-                  <div class="progress-bar progress-bar-striped progress-bar-animated" id="ins-progress" role="progressbar" style="width: 0%"></div>
+              <div class="ins-nav">
+                <button id="ins-prev" class="ins-nav-btn" title="Previous"><i class="bi bi-chevron-left"></i></button>
+                <div class="ins-date-wrap">
+                  <button id="ins-date-btn" class="ins-date-btn" title="Choose a date"><span id="ins-title"></span></button>
+                  <input type="date" id="ins-date" class="ins-date-input" tabindex="-1" aria-label="Choose a date">
                 </div>
-                <div id="ins-status" class="small text-muted mb-2"></div>
-
-                <div class="insights-toolbar">
-                  <div class="btn-group" role="group" aria-label="Period">
-                    <button class="btn btn-sm btn-outline-primary active" data-view="day">Day</button>
-                    <button class="btn btn-sm btn-outline-primary" data-view="week">Week</button>
-                    <button class="btn btn-sm btn-outline-primary" data-view="month">Month</button>
-                    <button class="btn btn-sm btn-outline-primary" data-view="sixmonths">6 Months</button>
-                  </div>
-                  <div class="d-flex align-items-center gap-1">
-                    <button id="ins-prev" class="btn btn-sm btn-light border" title="Previous"><i class="bi bi-chevron-left"></i></button>
-                    <input type="date" id="ins-date" class="form-control form-control-sm" style="width: 9.5rem;">
-                    <button id="ins-next" class="btn btn-sm btn-light border" title="Next"><i class="bi bi-chevron-right"></i></button>
-                    <button id="ins-today" class="btn btn-sm btn-light border">Today</button>
-                  </div>
-                  <select id="ins-metric" class="form-select form-select-sm" style="width: auto;">
-                    <option value="co2">CO₂</option>
-                    <option value="pm25">PM2.5</option>
-                    <option value="voc">VOC index</option>
-                    <option value="temp">Temperature</option>
-                    <option value="hum">Humidity</option>
-                  </select>
+                <button id="ins-next" class="ins-nav-btn" title="Next"><i class="bi bi-chevron-right"></i></button>
+                <button id="ins-today" class="btn btn-sm btn-link">Today</button>
+              </div>
+              <div class="ins-actions">
+                <select id="ins-device" class="form-select form-select-sm d-none" aria-label="Device"></select>
+                <select id="ins-metric" class="form-select form-select-sm" aria-label="Measurement">
+                  <option value="co2">CO₂</option>
+                  <option value="pm25">PM2.5</option>
+                  <option value="voc">VOC index</option>
+                  <option value="temp">Temperature</option>
+                  <option value="hum">Humidity</option>
+                </select>
+                <button id="ins-sync-btn" class="btn btn-sm btn-primary" disabled>
+                  <i class="bi bi-arrow-repeat me-1"></i> Sync from device
+                </button>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-light border" data-bs-toggle="dropdown" aria-expanded="false" title="More" aria-label="More">
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button id="ins-open-btn" class="dropdown-item" title="Import an Odak backup or a saved CSV / JSON history (or drop the file here)">
+                      <i class="bi bi-box-arrow-in-down me-2"></i>Import
+                    </button></li>
+                    <li><button id="ins-export-btn" class="dropdown-item" title="Save a backup with all measurements, Air Coach history and your plan" disabled>
+                      <i class="bi bi-box-arrow-up me-2"></i>Export backup
+                    </button></li>
+                  </ul>
                 </div>
-
-                <h5 id="ins-title" class="fw-semibold mt-3 mb-2"></h5>
-                <div id="ins-summary" class="insights-summary"></div>
-                <div id="ins-content" class="mt-3"></div>
-                <div id="ins-chart-wrap" class="chart-container mt-3">
-                  <canvas id="ins-chart"></canvas>
-                </div>
-                <div id="ins-coach" class="mt-4"></div>
               </div>
             </div>
+
+            <div class="progress mb-2 d-none" id="ins-progress-container" style="height: 4px;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" id="ins-progress" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div id="ins-status" class="small text-muted mb-2"></div>
+
+            <div id="ins-summary"></div>
+            <div class="ins-panel">
+              <div id="ins-content"></div>
+              <div id="ins-chart-wrap" class="chart-container">
+                <canvas id="ins-chart"></canvas>
+              </div>
+              <div id="ins-note" class="ins-note mt-2"></div>
+            </div>
+            <div id="ins-coach"></div>
+            <div id="ins-data-info" class="ins-note mt-3"></div>
           </div>
 
           <!-- My Plan Tab: priorities, weekday and weekend day plans -->
@@ -898,6 +922,23 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Asks for a name: the user's on first start, a new device's when it connects -->
+  <div class="modal fade" id="name-modal" tabindex="-1" aria-labelledby="name-modal-title" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content" id="name-form">
+        <div class="modal-body p-4">
+          <h5 class="fw-semibold mb-2" id="name-modal-title"></h5>
+          <p class="text-muted mb-3" id="name-modal-text"></p>
+          <input type="text" class="form-control" id="name-input" maxlength="40" aria-labelledby="name-modal-title">
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-link text-muted" id="name-skip">Not now</button>
+          <button type="submit" class="btn btn-primary" id="name-save">Save</button>
+        </div>
+      </form>
     </div>
   </div>
 

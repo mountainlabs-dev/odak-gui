@@ -18,7 +18,7 @@ const chartData = {
 
 // Import modules
 import { initCharts, addDataPoint, updateCharts, clearCharts } from './modules/chart-management.js';
-import { InsightsView, PHASES, samplesFromHistory, parseImportFile, parseCareLog, mergeCareLog } from './modules/insights.js';
+import { InsightsView, PHASES, samplesFromHistory, samplesFromSeries, parseImportFile, parseCareLog } from './modules/insights.js';
 import { t, lang, locale, saveLanguage, translatePage } from './i18n.js';
 
 // Static text first, before anything below writes translated text into the page
@@ -142,6 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       window.location.reload();
     });
+    
+    // Names
+    byId('user-btn').addEventListener('click', askUserName);
+    byId('device-rename-btn').addEventListener('click', () => nameConnectedDevice(false));
+    byId('ins-device').addEventListener('change', (event) => loadDeviceHistory(event.target.value));
     
     // Port selection and connection
     connectBtn.addEventListener('click', () => connectToPort());
@@ -297,18 +302,119 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // ─── Names: the user's and the devices' ─────────────────────────────────────
+  const USER_NAME_KEY = 'odak.userName';
+  let nameDialogs = Promise.resolve();   // one dialog at a time
+  
+  /** Show the name dialog after any open one. Resolves to the trimmed name, or null for "Not now". */
+  function askName({ title, text, placeholder = '', value = '' }) {
+    const ask = () => new Promise((resolve) => {
+      const modal = bootstrap.Modal.getOrCreateInstance(byId('name-modal'));
+      const input = byId('name-input');
+      byId('name-modal-title').textContent = title;
+      byId('name-modal-text').textContent = text;
+      input.placeholder = placeholder;
+      input.value = value;
+      const finish = (result) => {
+        byId('name-form').onsubmit = null;
+        byId('name-skip').onclick = null;
+        byId('name-modal').addEventListener('hidden.bs.modal', () => resolve(result), { once: true });
+        modal.hide();
+      };
+      byId('name-form').onsubmit = (event) => {
+        event.preventDefault();
+        finish(input.value.trim() || null);
+      };
+      byId('name-skip').onclick = () => finish(null);
+      byId('name-modal').addEventListener('shown.bs.modal', () => input.select(), { once: true });
+      modal.show();
+    });
+    nameDialogs = nameDialogs.then(ask);
+    return nameDialogs;
+  }
+  
+  function userName() {
+    try { return localStorage.getItem(USER_NAME_KEY); } catch (e) { return ''; }
+  }
+  
+  function showUserName() {
+    byId('user-name').textContent = userName() || '';
+  }
+  
+  async function askUserName() {
+    const name = await askName({
+      title: t('Welcome to Mountain Labs'),
+      text: t('What should we call you? Your name stays on this computer.'),
+      placeholder: t('Your name'),
+      value: userName() || '',
+    });
+    // "Not now" is remembered too, so the first-start question comes only once
+    try { localStorage.setItem(USER_NAME_KEY, name ?? (userName() || '')); } catch (e) { /* ignore */ }
+    showUserName();
+  }
+  
+  /** What to call a device in the interface. */
+  function deviceLabel(id, name) {
+    return name || (id === '' ? t('Earlier data') : 'Odak');
+  }
+  
+  /** Connected to an Odak: recognise it, or ask for a name the first time. */
+  async function identifyDevice(path) {
+    const port = knownPorts.find((p) => p.path === path);
+    connectedDevice = port && isOdakPort(port) ? { id: port.serialNumber || 'odak', name: null } : null;
+    showConnectedDevice();
+    if (!connectedDevice) return;
+    const seen = await window.api.deviceSeen(connectedDevice.id);
+    if (!seen.success) return;
+    connectedDevice.name = seen.device.name;
+    showConnectedDevice();
+    if (!connectedDevice.name) await nameConnectedDevice(true);
+    // Stay on what is shown until this device has data of its own (its first sync may claim it)
+    const hasData = deviceList.some((d) => d.id === connectedDevice?.id && d.count > 0);
+    if (insightsSource === 'device' && hasData) await loadDeviceHistory(connectedDevice.id);
+  }
+  
+  async function nameConnectedDevice(isNew) {
+    const device = connectedDevice;
+    if (!device) return;
+    const fallback = `Odak ${deviceList.filter((d) => d.id !== '' && d.name).length + 1}`;
+    const name = await askName({
+      title: isNew ? t('New Odak found') : t('Rename this device'),
+      text: t('Give it a name so you can tell your devices apart, for example the room it is in.'),
+      placeholder: t('Living room, bedroom…'),
+      value: device.name || fallback,
+    });
+    const chosen = name || device.name || fallback;
+    await window.api.renameDevice(device.id, chosen);
+    device.name = chosen;
+    showConnectedDevice();
+    await loadDeviceHistory(viewedDevice ?? device.id);
+  }
+  
+  function showConnectedDevice() {
+    byId('info-device').textContent = connectedDevice ? deviceLabel(connectedDevice.id, connectedDevice.name) : '--';
+    byId('device-rename-btn').classList.toggle('d-none', !connectedDevice);
+    if (isConnected) {
+      connectionStatus.innerHTML = '<span class="badge connected"><i class="bi bi-link me-1"></i> </span>';
+      connectionStatus.firstChild.append(t('Connected to {path}', { path: connectedDevice?.name || lastConnectedPort }));
+    }
+  }
+  
   // Port Management Functions
   function isOdakPort(port) {
     return (port.vendorId || '').toLowerCase() === ODAK_USB_VENDOR_ID;
   }
   
   function portLabel(port) {
-    return isOdakPort(port) ? `${port.path} — ODAK` : `${port.path}`;
+    if (!isOdakPort(port)) return port.path;
+    const known = deviceList.find((d) => d.id === (port.serialNumber || 'odak'));
+    return `${known?.name || 'ODAK'} (${port.path.split('/').pop()})`;   // the name first: the box is narrow
   }
   
   function updatePortList(portsData) {
     // Extract the ports list and connection info
     const ports = Array.isArray(portsData) ? portsData : (portsData.ports || []);
+    knownPorts = ports;
     const connectionInfo = !Array.isArray(portsData) ? {
       isConnected: portsData.isConnected,
       currentPort: portsData.currentPort
@@ -443,6 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
     connectionStatus.innerHTML = `<span class="badge connected"><i class="bi bi-link me-1"></i> ${t('Connected to {path}', { path })}</span>`;
     updateFirmwareBtn.disabled = !selectedFirmwarePath;
     addToCliOutput(t('Connected to {path}', { path }), 'cli-command');
+    deviceIdentified = identifyDevice(path);
     runConnectTasks(connectionSeq);
   }
   
@@ -489,13 +596,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function showDisconnected() {
+    connectedDevice = null;
+    showConnectedDevice();
     connectionStatus.innerHTML = `<span class="badge disconnected"><i class="bi bi-broadcast me-1"></i> ${t('Disconnected')}</span>`;
     connectBtn.disabled = false;
     disconnectBtn.disabled = true;
     setTimeBtn.disabled = true;
     setScheduleButtons(false);
     setScheduleStatus('');
-    downloadHistoryBtn.disabled = !historyCache;
+    downloadHistoryBtn.disabled = !historyInfo;
     insSyncBtn.disabled = true;
     // Forget the board: another Odak may be plugged in next. The dropdown keeps the last one as a suggestion.
     if (!firmwareUpdating) {
@@ -1173,46 +1282,44 @@ document.addEventListener('DOMContentLoaded', () => {
     return parseCareLog(lines);
   }
   
-  // ─── History cache and sync ─────────────────────────────────────────────────
-  // Everything downloaded so far is kept on disk ({ columns, rows, syncedAt }); a sync
-  // only asks the device for records newer than the cache, and keeps data the device
-  // has already overwritten. A device that was erased or swapped starts a new cache.
-  let historyCache = null;
+  // ─── History database and sync ──────────────────────────────────────────────
+  // Everything downloaded so far stays in a local database (src/history-db.js). A sync only asks
+  // the device for records newer than the last one stored, and nothing is ever removed: the data
+  // of a device that was erased or swapped stays, and its new records join it.
+  let knownPorts = [];             // the latest port list
+  let deviceList = [];             // [{ id, name, count }] from the database
+  let connectedDevice = null;      // { id, name } of the Odak connected now
+  let deviceIdentified = Promise.resolve();
+  let viewedDevice = null;         // the device whose history Insights shows
+  let historyInfo = null;          // { count, lastSeq, syncedAt } of that history; null while empty
+  let deviceSamples = [];          // what Insights shows
+  let deviceCare = [];
   let historySync = null;          // sync in progress (promise)
   let lastSyncAt = 0;
   
-  function cacheSeqs() {
-    if (!historyCache || historyCache.rows.length === 0) return null;
-    const i = historyCache.columns.indexOf('seq');
-    const rows = historyCache.rows;
-    return { first: Number(rows[0][i]), last: Number(rows[rows.length - 1][i]), index: i };
-  }
-  
-  /** Add downloaded rows to the cache; columns are matched by name (they change between firmware versions). */
-  function mergeIntoCache(columns, rows) {
-    if (!historyCache) {
-      historyCache = { columns: [...columns], rows: [], syncedAt: 0 };
+  /** Read a device's history into Insights; without `device`, the most recently seen one. */
+  async function loadDeviceHistory(device) {
+    const result = await window.api.loadHistory(device);
+    if (!result.success) {
+      addToCliOutput(t('Could not load the history cache: {error}', { error: result.error }), 'cli-warning');
+      return;
     }
-    const cache = historyCache;
-    const added = columns.filter((c) => !cache.columns.includes(c));
-    if (added.length) {
-      cache.columns.push(...added);
-      for (const row of cache.rows) row.push(...added.map(() => ''));
-    }
-    const positions = cache.columns.map((c) => columns.indexOf(c));
-    const seqIndex = columns.indexOf('seq');
-    const last = cacheSeqs()?.last ?? -1;
-    let count = 0;
-    for (const row of rows) {
-      if (Number(row[seqIndex]) <= last) continue;
-      cache.rows.push(positions.map((i) => (i < 0 || row[i] === undefined ? '' : row[i].trim())));
-      count++;
-    }
-    return count;
+    deviceList = result.devices;
+    viewedDevice = result.device;
+    historyInfo = result.info;
+    deviceSamples = result.series ? samplesFromSeries(result.series) : [];
+    deviceCare = result.care;
+    const select = byId('ins-device');
+    const choices = deviceList.filter((d) => d.count > 0);
+    if (viewedDevice !== null && !choices.some((d) => d.id === viewedDevice)) choices.push({ id: viewedDevice, name: connectedDevice?.name });
+    select.replaceChildren(...choices.map((d) => new Option(deviceLabel(d.id, d.name), d.id)));
+    select.value = viewedDevice ?? '';
+    select.classList.toggle('d-none', choices.length < 2);
+    showDeviceHistory();
   }
   
   /**
-   * Bring the cache up to date with the device. `ui` = { status(text, kind), progress(percent|null, kind) }.
+   * Bring the database up to date with the device. `ui` = { status(text, kind), progress(percent|null, kind) }.
    * Resolves { added, total } or { error }.
    */
   function syncHistory(ui) {
@@ -1227,48 +1334,41 @@ document.addEventListener('DOMContentLoaded', () => {
         const status = await readDataStatus();
         if (status.error) return status;
         
+        // Carry on from the last stored record, unless the device was erased
+        await deviceIdentified;
+        const device = connectedDevice?.id ?? 'odak';
+        const start = await window.api.historySyncStart({ device, oldest: status.oldest ?? null });
+        if (!start.success) return { error: start.error };
         let from = 0;
-        const cached = cacheSeqs();
-        if (cached && status.count > 0) {
-          const cachedOldest = historyCache.rows.find((r) => Number(r[cached.index]) === status.oldest?.seq);
-          const timeIndex = historyCache.columns.indexOf('time_utc');
-          const sameDevice = status.newest && status.newest.seq >= cached.last
-            && (!cachedOldest || !status.oldest || Number(cachedOldest[timeIndex]) === status.oldest.time);
-          if (sameDevice) {
-            from = cached.last + 1;
-          } else {
-            historyCache = null;  // erased or a different device: start over
-          }
-        }
+        if (start.lastSeq >= 0 && status.count > 0 && start.known && status.newest?.seq >= start.lastSeq) from = start.lastSeq + 1;
         
-        let added = 0;
-        if (status.count > 0 && (!historyCache || from <= status.newest.seq)) {
+        let dump = null;
+        if (status.count > 0 && from <= status.newest.seq) {
           ui.status(t('Reading stored measurements…'));
-          const result = await dumpHistory(from, (got, total) => {
+          dump = await dumpHistory(from, (got, total) => {
             ui.progress(Math.min(99, Math.round((got / total) * 100)));
             ui.status(t('Downloading… {got} of {total} records', { got, total }));
           });
-          if (result.error) return { error: result.error };
-          added = mergeIntoCache(result.columns, result.rows);
+          if (dump.error) return { error: dump.error };
         }
         
-        // Air Coach log ($CARE_LOG): the device keeps the last 480 cards, the cache keeps all
-        let careAdded = 0;
-        const care = await readCareLog();
-        if (care && historyCache) {
-          // New cards, or cards whose answer / outcome changed since the last sync
-          const known = new Map((historyCache.care || []).map(e => [`${e.t}|${e.action}`, `${e.answer}|${e.outcome}`]));
-          careAdded = care.filter(e => known.get(`${e.t}|${e.action}`) !== `${e.answer}|${e.outcome}`).length;
-          historyCache.care = mergeCareLog(historyCache.care, care);
-        }
-        if (historyCache) {
-          historyCache.syncedAt = Date.now();
-          const saved = await window.api.saveHistoryCache(historyCache);
-          if (!saved.success) addToCliOutput(t('Could not save the history cache: {error}', { error: saved.error }), 'cli-warning');
-        }
+        // Air Coach log ($CARE_LOG): the device keeps the last 480 cards, the database keeps all.
+        // New cards, or cards whose answer / outcome changed since the last sync.
+        const known = new Map(start.care.map(e => [`${e.t}|${e.action}`, `${e.answer}|${e.outcome}`]));
+        const care = ((await readCareLog()) || []).filter(e => known.get(`${e.t}|${e.action}`) !== `${e.answer}|${e.outcome}`);
+        
+        const saved = await window.api.addHistory({
+          device,
+          columns: dump?.columns,
+          rows: dump?.rows,
+          care,
+          lastSeq: status.count > 0 ? status.newest.seq : undefined,
+          syncedAt: Date.now(),
+        });
+        if (!saved.success) return { error: t('Could not save the history cache: {error}', { error: saved.error }) };
         lastSyncAt = Date.now();
-        showDeviceHistory();
-        return { added, careAdded, total: historyCache ? historyCache.rows.length : 0 };
+        await loadDeviceHistory(device);
+        return { added: saved.added, careAdded: care.length, total: historyInfo ? historyInfo.count : 0 };
       } catch (error) {
         finishHistoryDump(error.message);
         return { error: error.message };
@@ -1292,14 +1392,19 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
       }
-      if (!historyCache || historyCache.rows.length === 0) {
+      if (!historyInfo) {
         setHistoryStatus(t('The device has no stored measurements yet.'), 'warning');
         setHistoryProgress(null);
         return;
       }
       
       setHistoryProgress(100, 'success');
-      const history = buildHistory(historyCache.columns, historyCache.rows);
+      const stored = await window.api.exportHistory(viewedDevice);
+      if (!stored.success) {
+        setHistoryStatus(t('Could not save the file: {error}', { error: stored.error }), 'danger');
+        return;
+      }
+      const history = buildHistory(stored.columns, stored.rows);
       const first = history.records[0];
       const last = history.records[history.records.length - 1];
       const range = first.time_local && last.time_local ? ` (${first.time_local} → ${last.time_local})` : '';
@@ -1315,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setHistoryStatus(t('Could not save the file: {error}', { error: saved.error }), 'danger');
       }
     } finally {
-      downloadHistoryBtn.disabled = !isConnected && !historyCache;
+      downloadHistoryBtn.disabled = !isConnected && !historyInfo;
     }
   }
   
@@ -1326,6 +1431,8 @@ document.addEventListener('DOMContentLoaded', () => {
     next: byId('ins-next'),
     today: byId('ins-today'),
     date: byId('ins-date'),
+    dateBtn: byId('ins-date-btn'),
+    note: byId('ins-note'),
     metric: byId('ins-metric'),
     title: byId('ins-title'),
     summary: byId('ins-summary'),
@@ -1360,13 +1467,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
   function showDeviceHistory() {
     insightsSource = 'device';
-    const samples = historyCache ? samplesFromHistory(historyCache.columns, historyCache.rows) : [];
-    const care = historyCache?.care || [];
-    const synced = historyCache?.syncedAt ? t('synced {time}', { time: new Date(historyCache.syncedAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }) }) : '';
+    const samples = deviceSamples;
+    const care = deviceCare;
+    const synced = historyInfo?.syncedAt ? t('synced {time}', { time: new Date(historyInfo.syncedAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }) }) : '';
     byId('ins-data-info').textContent = samples.length ? describeData(samples, care, `${t('Device data')}${synced ? `, ${synced}` : ''}`) : '';
     insightsView.setData(samples, care);
-    downloadHistoryBtn.disabled = !isConnected && !historyCache;
-    byId('ins-export-btn').disabled = !historyCache;
+    downloadHistoryBtn.disabled = !isConnected && !historyInfo;
+    byId('ins-export-btn').disabled = !historyInfo;
   }
   
   async function syncInsights() {
@@ -1443,16 +1550,21 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // A single file with everything: measurements, coach log and the plan
   async function exportBackup() {
-    if (!historyCache) return;
+    if (!historyInfo) return;
+    const stored = await window.api.exportHistory(viewedDevice);
+    if (!stored.success) {
+      setInsightsStatus(t('Could not save the backup: {error}', { error: stored.error }), 'danger');
+      return;
+    }
     const backup = {
       format: 'odak-backup',
       version: 1,
       exportedAt: new Date().toISOString(),
       app: `Mountain Labs ${infoFirmware.textContent && infoFirmware.textContent.startsWith('v') ? `(firmware ${infoFirmware.textContent})` : ''}`.trim(),
       plan: { schedule: getSchedule(), priorities: getPriorities() },
-      columns: historyCache.columns,
-      rows: historyCache.rows,
-      care: historyCache.care || [],
+      columns: stored.columns,
+      rows: stored.rows,
+      care: stored.care,
     };
     const result = await window.api.saveBackup(backup);
     if (result.success) setInsightsStatus(t('Backup saved to {file}', { file: result.filePath }), 'success');
@@ -1834,6 +1946,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const key = offer ? `${fw.board}-${offer.version}` : null;
     if (!offer || fw.offered.has(key)) return;
     fw.offered.add(key);
+    await deviceIdentified;   // not on top of the question about the device's name
     byId('fw-modal-text').textContent = t(fw.board === 'v1'
       ? 'Odak firmware v{version} is available for your original (v1) board. You have v{installed}. Update now?'
       : 'Odak firmware v{version} is available for your v2 board. You have v{installed}. Update now?', { version: offer.version, installed: fw.version });
@@ -2014,6 +2127,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Chart Functions
   function initCharts() {
     // Chart.js global defaults
+    Chart.defaults.locale = locale;
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.font.size = 12;
     Chart.defaults.color = '#495057';
@@ -2709,9 +2823,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start-up that needs the Insights view: show the cached history and the schedule
   renderScheduleVisuals();
   renderFirmware();
-  window.api.loadHistoryCache().then((result) => {
-    if (result.success && result.cache && Array.isArray(result.cache.rows)) historyCache = result.cache;
-    else if (!result.success) addToCliOutput(t('Could not load the history cache: {error}', { error: result.error }), 'cli-warning');
-    showDeviceHistory();
-  });
+  showUserName();
+  refreshPorts();   // the list sent at start-up can arrive before this page listens
+  startUp();
+  
+  /** Splash until the history is in (at least long enough to read it), then the first-start question. */
+  async function startUp() {
+    const splash = byId('splash');
+    const name = userName();
+    if (name) byId('splash-greeting').textContent = t('Hello, {name}', { name });
+    await Promise.all([
+      loadDeviceHistory().catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, 1400)),
+    ]);
+    splash.classList.add('done');
+    setTimeout(() => splash.remove(), 500);
+    if (name === null) askUserName();
+  }
 });

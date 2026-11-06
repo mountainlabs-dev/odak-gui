@@ -2,7 +2,7 @@
 
 *Türkçe: [PRIVACY.tr.md](PRIVACY.tr.md)*
 
-Last updated: 28 October 2026
+Last updated: 6 November 2026
 
 This policy covers the Mountain Labs desktop app for the Odak air quality monitor (previously
 called *Odak Air Quality Monitor*), by Mountain Labs Teknoloji AŞ ("Mountain Labs"), on macOS (Mac
@@ -17,14 +17,17 @@ The app talks to your Odak device over its USB cable. Everything it reads stays 
 - **Files you save** (logs, history exports, backups, console exports) go only where you choose.
 - **Your plan and priorities** (schedule, allergy / infection / fatigue / focus) are stored on your
   Odak device and in the app on your computer.
-- **Your settings** (interface language, board type, automatic clock setting) are kept in the app
-  on your computer.
+- **Your settings** (interface language, board type, automatic clock setting), **your name** and
+  **the names you give your devices**, if you enter them, are kept in the app on your computer.
+- To tell your devices apart, the app stores each Odak's USB serial number with its data, on your
+  computer.
 
 ## What the app does not do
 
 - It does not send any data to Mountain Labs or anyone else.
 - It does not use analytics, crash reporting, advertising or tracking.
-- It does not create accounts or ask for personal details.
+- It does not create accounts. The only personal detail it asks for is your name, which is optional
+  and stays on your computer.
 - It connects to the internet only to check for and download Odak firmware updates: it reads
   the firmware list and, when you agree to an update, downloads the firmware file from
   Mountain Labs' release page on GitHub. These requests carry no personal data or device data;

@@ -8,6 +8,7 @@ const { spawn } = require('child_process');
 const { flashLinux } = require('./linux-flash');
 const { flashMac } = require('./mac-flash');
 const firmwareUpdates = require('./firmware-updates');
+const historyDb = require('./history-db');
 const i18n = require('./main-i18n');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -46,11 +47,16 @@ function language() {
 }
 const tm = (text) => i18n.translate(language(), text);
 
+/** Events can outlive the window: the serial port closes after it, for one. */
+function sendToWindow(channel, data) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, data);
+}
+
 /** Send flasher output to the window line by line, translated and tagged with its stage. */
 function sendFirmwareProgress(output) {
   for (const line of String(output).split('\n')) {
     if (!line.trim()) continue;
-    mainWindow.webContents.send('firmware-progress', { message: tm(line.trim()), stage: i18n.progressStage(line) });
+    sendToWindow('firmware-progress', { message: tm(line.trim()), stage: i18n.progressStage(line) });
   }
 }
 
@@ -72,6 +78,8 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: false,                // shown once the page's splash is ready, without a white flash
+    backgroundColor: '#2c5944',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -80,6 +88,8 @@ const createWindow = () => {
     icon: iconPath
   });
 
+  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.on('closed', () => { mainWindow = null; });
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // Open DevTools in development mode
@@ -115,7 +125,7 @@ function showAboutWindow() {
     resizable: false,
     minimizable: false,
     maximizable: false,
-    parent: mainWindow,
+    parent: mainWindow || undefined,
     modal: process.platform !== 'darwin',
     title: tm('About Mountain Labs'),
     icon: path.join(__dirname, '../assets/icons', 'odak.png'),
@@ -201,6 +211,8 @@ app.on('ready', () => {
   createWindow();
 });
 
+app.on('will-quit', () => historyDb.close());
+
 // Quit when all windows are closed
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -236,19 +248,15 @@ function startPortRefresh() {
 async function listSerialPorts() {
   try {
     const ports = await SerialPort.list();
-    if (mainWindow) {
-      // Send the connection state along with the ports list
-      mainWindow.webContents.send('ports-list', {
-        ports: ports,
-        isConnected: serialConnection && serialConnection.isOpen,
-        currentPort: serialConnection ? serialConnection.path : null
-      });
-    }
+    // Send the connection state along with the ports list
+    sendToWindow('ports-list', {
+      ports: ports,
+      isConnected: serialConnection && serialConnection.isOpen,
+      currentPort: serialConnection ? serialConnection.path : null
+    });
   } catch (error) {
     console.error('Error listing ports:', error);
-    if (mainWindow) {
-      mainWindow.webContents.send('error', { message: tm('Failed to list serial ports'), details: error.message });
-    }
+    sendToWindow('error', { message: tm('Failed to list serial ports'), details: error.message });
   }
 }
 
@@ -292,7 +300,7 @@ ipcMain.handle('connect-port', async (event, portConfig) => {
     
     // Set up event listeners
     serialConnection.on('open', () => {
-      mainWindow.webContents.send('connection-status', { connected: true, port: portConfig.path });
+      sendToWindow('connection-status', { connected: true, port: portConfig.path });
     });
     
     const connection = serialConnection;
@@ -300,19 +308,19 @@ ipcMain.handle('connect-port', async (event, portConfig) => {
       // Ignore closes of a connection that has already been replaced
       if (connection !== serialConnection) return;
       // err.disconnected is set when the device vanished (unplug, reset, firmware update)
-      mainWindow.webContents.send('connection-status', { connected: false, lost: !!(err && err.disconnected) });
+      sendToWindow('connection-status', { connected: false, lost: !!(err && err.disconnected) });
     });
     
     serialConnection.on('error', (err) => {
       console.error('Serial port error:', err);
       const details = isLinuxPermissionError(err) ? linuxSerialPermissionMessage(portConfig.path) : err.message;
-      mainWindow.webContents.send('error', { message: tm('Serial port error'), details });
+      sendToWindow('error', { message: tm('Serial port error'), details });
     });
     
     parser.on('data', (data) => {
       try {
         // Process incoming data
-        mainWindow.webContents.send('serial-data', data);
+        sendToWindow('serial-data', data);
         
         // Log data if enabled (history downloads are saved separately, not into the live log)
         if (data.startsWith('DATA_BEGIN,')) inDataDump = true;
@@ -446,7 +454,7 @@ ipcMain.handle('firmware-download', async (event, board) => {
     if (!entry) return { success: false, error: tm(`No firmware is published for board ${board}.`) };
     const dir = path.join(app.getPath('userData'), 'firmware');
     const file = await firmwareUpdates.downloadFirmware(entry, dir, (received, total) => {
-      mainWindow.webContents.send('firmware-download-progress', { received, total });
+      sendToWindow('firmware-download-progress', { received, total });
     });
     return { success: true, path: file, version: entry.version };
   } catch (error) {
@@ -681,31 +689,67 @@ ipcMain.handle('save-history', async (event, history) => {
   }
 });
 
-// History cache: everything downloaded from the device so far, so later syncs
-// only fetch new records ($DATA_DUMP,<from seq>) and older data survives the
-// device overwriting its oldest records. Stored as { columns, rows, syncedAt }.
-const historyCachePath = () => path.join(app.getPath('userData'), 'history-cache.json');
+// History: everything downloaded so far stays in a local database (src/history-db.js), so later
+// syncs only fetch new readings and older data survives the device overwriting its oldest records
+function historyDatabase() {
+  historyDb.open(app.getPath('userData'));
+  return historyDb;
+}
 
-ipcMain.handle('history-cache-load', async () => {
+// `device` undefined: the most recently seen device with data
+ipcMain.handle('history-load', async (event, device) => {
   try {
-    if (!fs.existsSync(historyCachePath())) return { success: true, cache: null };
-    const cache = JSON.parse(await fs.promises.readFile(historyCachePath(), 'utf8'));
-    return { success: true, cache };
+    const database = historyDatabase();
+    const devices = database.listDevices();
+    const id = device ?? devices.find((d) => d.count > 0)?.id ?? null;
+    const info = id === null ? null : database.info(id);
+    return { success: true, device: id, devices, info, series: info ? database.series(id) : null, care: id === null ? [] : database.shownCareLog(id) };
   } catch (error) {
-    console.error('History cache load error:', error);
+    console.error('History load error:', error);
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('history-cache-save', async (event, cache) => {
+ipcMain.handle('history-sync-start', async (event, request) => {
   try {
-    // Write to a temp file first so a crash never leaves a half-written cache
-    const tempPath = `${historyCachePath()}.tmp`;
-    await fs.promises.writeFile(tempPath, JSON.stringify(cache));
-    await fs.promises.rename(tempPath, historyCachePath());
+    return { success: true, ...historyDatabase().syncStart(request) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('history-add', async (event, sync) => {
+  try {
+    return { success: true, added: historyDatabase().addSync(sync) };
+  } catch (error) {
+    console.error('History save error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('history-export', async (event, device) => {
+  try {
+    const database = historyDatabase();
+    return { success: true, ...database.allRows(device), care: database.careLog(device) };
+  } catch (error) {
+    console.error('History export error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('device-seen', async (event, id) => {
+  try {
+    return { success: true, device: historyDatabase().deviceSeen(id) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('device-rename', async (event, id, name) => {
+  try {
+    historyDatabase().renameDevice(id, name);
     return { success: true };
   } catch (error) {
-    console.error('History cache save error:', error);
     return { success: false, error: error.message };
   }
 });
@@ -818,8 +862,6 @@ function logData(data) {
   } catch (error) {
     console.error('Data logging error:', error);
     // Notify renderer about logging error
-    if (mainWindow) {
-      mainWindow.webContents.send('error', { message: tm('Data logging error'), details: error.message });
-    }
+    sendToWindow('error', { message: tm('Data logging error'), details: error.message });
   }
 }

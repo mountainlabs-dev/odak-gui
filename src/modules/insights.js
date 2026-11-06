@@ -52,6 +52,15 @@ const co2Level = (ppm) => (ppm <= 800 ? 0 : ppm <= 1000 ? 1 : ppm <= 1400 ? 2 : 
 const pmLevel = (ugm3) => (ugm3 <= 12 ? 0 : ugm3 <= 35 ? 1 : ugm3 <= 55 ? 2 : 3);
 const vocLevel = (index) => (index <= 150 ? 0 : index <= 200 ? 1 : 3);
 
+const METRIC_LEVEL = { co2: co2Level, pm25: pmLevel, voc: vocLevel };
+const NEUTRAL_COLOR = '#a9b7c6';
+
+/** Colour for an average of one metric. Temperature and humidity have no air rating, so stay neutral. */
+function metricColor(metric, value) {
+  const level = METRIC_LEVEL[metric];
+  return level ? LEVELS[level(value)].color : NEUTRAL_COLOR;
+}
+
 /** Worst of the three; voc < 0 means no VOC data. Driver: 0 CO2, 1 PM, 2 VOC. */
 export function rate(co2, pm25, voc) {
   let level = co2Level(co2);
@@ -143,13 +152,6 @@ export function parseCareLog(lines) {
     });
   }
   return entries;
-}
-
-/** Merge new log entries into old ones; the same card (time + action) takes its newest answer and outcome. */
-export function mergeCareLog(oldEntries, newEntries) {
-  const byKey = new Map();
-  for (const e of [...(oldEntries || []), ...newEntries]) byKey.set(`${e.t}|${e.action}`, e);
-  return [...byKey.values()].sort((a, b) => a.t - b.t);
 }
 
 // ─── Values and statistics ──────────────────────────────────────────────────
@@ -269,6 +271,27 @@ export function samplesFromHistory(columns, rows) {
     });
   }
   samples.sort((a, b) => a.t - b.t);
+  return samples;
+}
+
+/** Samples from the local database's series (see history-db.js), already sorted and with a valid clock. */
+export function samplesFromSeries(s) {
+  const samples = new Array(s.n);
+  for (let i = 0; i < s.n; i++) {
+    samples[i] = {
+      t: s.t[i],
+      co2: s.co2[i] || 0,
+      pm1: s.pm1[i],
+      pm25: s.pm25[i] || 0,
+      pm10: s.pm10[i],
+      voc: s.voc[i] || 0,
+      temp: s.temp[i],
+      hum: s.hum[i],
+      pressure: s.pressure[i],
+      aqi: s.aqi[i],
+      battery: s.battery[i],
+    };
+  }
   return samples;
 }
 
@@ -506,22 +529,10 @@ const backgroundPlugin = {
       const x = scales.x.getPixelForValue(m.t);
       if (x < area.left || x > area.right) continue;
       const helped = m.outcome === 'improved' || m.outcome === 'prevented';
-      const color = helped ? '#2fb380' : m.answer === 'done' ? '#0057ff' : '#adb5bd';
-      ctx.strokeStyle = color;
-      ctx.setLineDash([2, 3]);
+      ctx.fillStyle = helped ? '#2fb380' : m.answer === 'done' ? '#0057ff' : '#adb5bd';
       ctx.beginPath();
-      ctx.moveTo(x, area.top + 22);
-      ctx.lineTo(x, area.bottom);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(x, area.top + 22, 9, 0, Math.PI * 2);
+      ctx.arc(x, area.bottom - 7, 4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = '700 9px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(m.code, x, area.top + 25);
     }
     ctx.restore();
   },
@@ -546,17 +557,23 @@ export class InsightsView {
     this.date = startOfDay(new Date());
     this.metric = 'co2';
     this.chart = null;
+    this.coachOpen = false;
 
     el.viewButtons.forEach(btn => btn.addEventListener('click', () => this.setView(btn.dataset.view)));
     el.prev.addEventListener('click', () => this.step(-1));
     el.next.addEventListener('click', () => this.step(1));
     el.today.addEventListener('click', () => { this.date = startOfDay(new Date()); this.render(); });
+    el.dateBtn.addEventListener('click', () => el.date.showPicker());
     el.date.addEventListener('change', () => {
       if (!el.date.value) return;
       this.date = fromIso(el.date.value);
       this.render();
     });
     el.metric.addEventListener('change', () => { this.metric = el.metric.value; this.render(); });
+    // The view is rebuilt often: keep the Air Coach details open once opened
+    el.coach.addEventListener('toggle', (event) => {
+      if (event.target.classList.contains('coach-section')) this.coachOpen = event.target.open;
+    }, true);
     // Clicking a day opens it; clicking a week opens that week
     el.content.addEventListener('click', (event) => {
       const cell = event.target.closest('[data-date], [data-week]');
@@ -608,6 +625,8 @@ export class InsightsView {
   render() {
     this.el.date.value = isoDate(this.date);
     if (this.chart) { this.chart.destroy(); this.chart = null; }
+    this.el.chartWrap.classList.add('d-none');
+    this.el.note.textContent = '';
     if (this.samples.length === 0) {
       this.el.title.textContent = t('No history yet');
       this.el.summary.innerHTML = '';
@@ -617,10 +636,8 @@ export class InsightsView {
           <i class="bi bi-graph-up"></i>
           <div>${t('Connect your Odak and click <b>Sync from device</b>, or drop an exported file here.')}</div>
         </div>`;
-      this.el.chartWrap.classList.add('d-none');
       return;
     }
-    this.el.chartWrap.classList.remove('d-none');
     const index = this.getIndex();
     if (this.view === 'day') this.renderDay(index);
     else if (this.view === 'week') this.renderWeek(index);
@@ -628,24 +645,32 @@ export class InsightsView {
     else this.renderSixMonths(index);
   }
 
-  // ── Headline numbers ──
-  renderSummary(agg) {
+  // ── The answer first: how the air was, and a few numbers ──
+  renderSummary(agg, tip = '') {
     const m = METRICS[this.metric];
     const st = agg.metrics.get(this.metric);
     const all = agg.stats;
-    const chips = [];
-    if (!all.empty) chips.push([t('Good air'), percent(Math.round((all.good / all.n) * 100)), t('of the time')]);
-    if (st) {
-      chips.push([t('Average {metric}', { metric: m.label }), formatMetric(st.avg, this.metric), '']);
-      chips.push([t('Lowest – highest'), `${formatMetric(st.min, this.metric, false)} – ${formatMetric(st.max, this.metric)}`, '']);
+    if (all.empty) {
+      this.el.summary.innerHTML = '';
+      return;
     }
-    if (!all.empty) chips.push([t('CO₂ above 1000 ppm'), percent(Math.round((all.above1000 / all.n) * 100)), t('of the time')]);
-    chips.push([t('Measurements'), all.n.toLocaleString(locale), '']);
-    this.el.summary.innerHTML = chips.map(([label, value, note]) => `
-      <div class="insights-chip">
-        <div class="insights-chip-label">${label}</div>
-        <div class="insights-chip-value">${escapeHtml(value)} <span>${note}</span></div>
-      </div>`).join('');
+    const stats = [[t('Good air'), percent(Math.round((all.good / all.n) * 100))]];
+    if (st) {
+      stats.push([t('Average {metric}', { metric: m.label }), formatMetric(st.avg, this.metric)]);
+      stats.push([t('Lowest – highest'), `${formatMetric(st.min, this.metric, false)} – ${formatMetric(st.max, this.metric)}`]);
+    }
+    const level = LEVELS[all.level()];
+    this.el.summary.innerHTML = `
+      <div class="ins-hero" style="--level:${level.color}">
+        <div class="ins-hero-verdict">
+          <div class="ins-hero-label">${t('Air quality')}</div>
+          <div class="ins-hero-level">${level.name}</div>
+          ${tip ? `<div class="ins-hero-tip">${tip}</div>` : ''}
+        </div>
+        <div class="ins-hero-stats">
+          ${stats.map(([label, value]) => `<div><div class="ins-hero-label">${label}</div><div class="ins-hero-value">${escapeHtml(value)}</div></div>`).join('')}
+        </div>
+      </div>`;
   }
 
   // ── Air Coach: suggestions, results and the user's priorities for a period ──
@@ -674,11 +699,6 @@ export class InsightsView {
     const chosen = this.getPriorities();
     const shownPriorities = chosen.length ? chosen : [0, 1, 2, 3];
 
-    const stat = (value, label, icon, cls = '') => `
-      <div class="coach-stat ${cls}">
-        <i class="bi ${icon}"></i>
-        <div><div class="coach-stat-value">${value}</div><div class="coach-stat-label">${label}</div></div>
-      </div>`;
     const helped = c.improved + c.prevented;
 
     // Per priority: time at high risk now vs the previous period, and the actions that served it
@@ -686,9 +706,6 @@ export class InsightsView {
     const cards = shownPriorities.map((p) => {
       const pr = PRIORITIES[p];
       const share = pct(agg, p);
-      const mine = agg.care.filter(e => actionInfo(e.action).risks.includes(p));
-      const done = mine.filter(e => e.answer === 'done').length;
-      const good = mine.filter(e => e.outcome === 'improved' || e.outcome === 'prevented').length;
       let trend = '';
       const was = compare ? pct(compare.before, p) : null;
       const now = compare ? pct(compare.after, p) : null;
@@ -707,49 +724,46 @@ export class InsightsView {
           <div class="priority-value">${share === null ? '—' : percent(Math.round(share))}</div>
           <div class="priority-note">${t(p === 3 ? 'of focus time with raised exposure to {exposure}' : 'of the time with raised exposure to {exposure}', { exposure: pr.exposure })}</div>
           ${trend}
-          <div class="priority-actions">${t(done === 1 ? '1 action done for this · {helped} helped' : '{done} actions done for this · {helped} helped', { done, helped: good })}</div>
         </div>`;
     }).join('');
 
     const top = [...c.byAction.entries()].sort((a, b) => b[1].shown - a[1].shown).slice(0, 6).map(([code, a]) => `
-      <tr><td><span class="action-code">${escapeHtml(code)}</span> ${escapeHtml(actionInfo(code).text)}</td>
+      <tr><td>${escapeHtml(actionInfo(code).text)}</td>
         <td class="text-end">${a.shown}</td><td class="text-end">${a.done}</td><td class="text-end">${a.helped}</td></tr>`).join('');
 
     const entries = list ? agg.care.slice().sort((a, b) => a.t - b.t).map((e) => {
       const [outText, outKind] = OUTCOME_TEXT[e.outcome] || [e.outcome, 'muted'];
       const time = new Date(e.t).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-      return `<li><span class="coach-time">${time}</span><span class="action-code">${escapeHtml(e.action)}</span>
+      return `<li><span class="coach-time">${time}</span>
         <span class="flex-grow-1">${escapeHtml(actionInfo(e.action).text)}</span>
         <span class="badge text-bg-light">${ANSWER_TEXT[e.answer] || escapeHtml(e.answer)}</span>
         <span class="small text-${outKind}">${outText}</span></li>`;
     }).join('') : '';
 
+    const summary = c.shown === 0
+      ? `${t(`No suggestions in this ${periodName}`)}${this.care.length === 0 ? t(' — sync with a device running the Air Coach firmware to see them') : ''}.`
+      : t('{shown} suggestions · {done} done · {helped} helped', { shown: c.shown, done: c.done, helped });
+
     this.el.coach.innerHTML = `
-      <div class="coach-section">
-        <div class="d-flex align-items-baseline gap-2 mb-2">
-          <h6 class="fw-semibold mb-0"><i class="bi bi-stars me-1"></i> ${t('Air Coach')}</h6>
-          <span class="small text-muted">${t('Suggestions Odak made on its screen and what happened next')}</span>
+      <details class="coach-section"${this.coachOpen ? ' open' : ''}>
+        <summary>
+          <span class="coach-title"><i class="bi bi-stars me-1"></i>${t('Air Coach')}</span>
+          <span class="coach-summary">${summary}</span>
+        </summary>
+        <div class="coach-body">
+          <div class="small text-muted mb-3">${t('Suggestions Odak made on its screen and what happened next')}</div>
+          <h6 class="fw-semibold mb-2">${chosen.length ? t('Your priorities') : t('By priority')}
+            ${chosen.length ? '' : `<span class="small text-muted fw-normal">${t('— choose up to two in My Plan to focus on them')}</span>`}</h6>
+          <div class="priority-cards">${cards}</div>
+          ${entries ? `<ul class="coach-list mt-3">${entries}</ul>` : ''}
+          ${!list && top ? `
+            <table class="table table-sm small coach-table mt-3 mb-0">
+              <thead><tr><th>${t('Most suggested')}</th><th class="text-end">${t('Shown')}</th><th class="text-end">${t('Done')}</th><th class="text-end">${t('Helped')}</th></tr></thead>
+              <tbody>${top}</tbody>
+            </table>` : ''}
         </div>
-        ${c.shown === 0
-          ? `<div class="small text-muted mb-3">${t(`No suggestions in this ${periodName}`)}${this.care.length === 0 ? t(' — sync with a device running the Air Coach firmware to see them') : ''}.</div>`
-          : `<div class="coach-stats">
-              ${stat(c.shown, t('actions suggested'), 'bi-chat-square-text')}
-              ${stat(c.done, t('done by you'), 'bi-check2-circle')}
-              ${stat(c.improved, t('times air improved'), 'bi-graph-down-arrow', 'good')}
-              ${stat(c.prevented, t('bad parts of the day prevented'), 'bi-shield-check', 'good')}
-            </div>
-            <div class="small text-muted mt-1">${helped > 0 ? t(helped === 1 ? 'Your actions made the air better 1 time' : 'Your actions made the air better {count} times', { count: helped }) : t('No measured improvement yet')}${c.keptGood ? t(', and kept it good {count} more', { count: c.keptGood }) : ''}.</div>`}
-        ${entries ? `<ul class="coach-list mt-2">${entries}</ul>` : ''}
-        ${!list && top ? `
-          <table class="table table-sm small coach-table mt-2">
-            <thead><tr><th>${t('Most suggested')}</th><th class="text-end">${t('Shown')}</th><th class="text-end">${t('Done')}</th><th class="text-end">${t('Helped')}</th></tr></thead>
-            <tbody>${top}</tbody>
-          </table>` : ''}
-        <h6 class="fw-semibold mt-3 mb-2">${chosen.length ? t('Your priorities') : t('By priority')}
-          ${chosen.length ? '' : `<span class="small text-muted fw-normal">${t('— choose up to two in My Plan to focus on them')}</span>`}</h6>
-        <div class="priority-cards">${cards}</div>
-        <div class="small text-muted mt-2">${t('Odak coaches you to lower your exposure to known triggers. It does not diagnose or treat any condition.')}</div>
-      </div>`;
+      </details>
+      <div class="ins-note mt-2">${t('Odak coaches you to lower your exposure to known triggers. It does not diagnose or treat any condition.')}</div>`;
   }
 
   // ── Day: the schedule day (last night's sleep, then wake, focus, rest) ──
@@ -761,22 +775,17 @@ export class InsightsView {
     const [from, to] = dayWindow(this.date, schedule);
     this.el.title.textContent = fmt(this.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const agg = day || new PeriodAgg();
-    this.renderSummary(agg);
 
     let worst = -1; let worstLevel = 0; let worstDriver = 0;
     const tiles = DAY_ORDER.map((p) => {
       const phase = PHASES[p];
       const st = agg.phases[p];
-      const plan = schedule ? schedule[p === 3 ? profileFor(addDays(this.date, -1)) : profile] : null;
-      const startText = plan ? t('from {time}', { time: hhmm(plan[p]) }) : '';
-      const done = agg.care.filter(e => e.answer === 'done' && phaseAt(new Date(e.t), schedule) === p).length;
-      const doneText = done ? `<span class="tile-done" title="${t('Actions done')}"><i class="bi bi-check2"></i> ${done}</span>` : '';
       if (st.empty) {
         return `
           <div class="phase-tile empty">
-            <div class="phase-tile-head"><i class="bi ${phase.icon}" style="color:${phase.color}"></i> ${phase.name}<span>${startText}</span></div>
+            <div class="phase-tile-head"><i class="bi ${phase.icon}" style="color:${phase.color}"></i> ${phase.name}</div>
             <div class="phase-tile-level">—</div>
-            <div class="phase-tile-note">${t('no data')} ${doneText}</div>
+            <div class="phase-tile-note">${t('no data')}</div>
           </div>`;
       }
       const { level, driver } = st.rating();
@@ -784,9 +793,9 @@ export class InsightsView {
       const note = level > 0 ? `${DRIVER_NAMES[driver]} ${st.driverValue(driver)}` : `CO₂ ${st.avgCo2.toFixed(0)} ppm`;
       return `
         <div class="phase-tile" style="--level:${LEVELS[level].color}">
-          <div class="phase-tile-head"><i class="bi ${phase.icon}" style="color:${phase.color}"></i> ${phase.name}<span>${startText}</span></div>
+          <div class="phase-tile-head"><i class="bi ${phase.icon}" style="color:${phase.color}"></i> ${phase.name}</div>
           <div class="phase-tile-level">${LEVELS[level].name}</div>
-          <div class="phase-tile-note">${note} ${doneText}</div>
+          <div class="phase-tile-note">${note}</div>
         </div>`;
     });
 
@@ -801,12 +810,11 @@ export class InsightsView {
     const windowText = schedule
       ? `${new Date(from).toLocaleString(locale, { weekday: 'short', hour: '2-digit', minute: '2-digit' })} – ${new Date(to).toLocaleString(locale, { weekday: 'short', hour: '2-digit', minute: '2-digit' })} · ${t(profile === 'weekend' ? 'weekend plan' : 'weekday plan')} · ${t("last night's sleep counts for this day")}`
       : t('Calendar day — set a plan in My Plan to rate each part of the day');
+    this.renderSummary(agg, schedule && samples.length ? tip : '');
+    this.el.note.textContent = samples.length ? windowText : '';
     this.el.content.innerHTML = samples.length === 0
       ? `<div class="insights-empty small"><i class="bi bi-calendar-x"></i><div>${t('No measurements on this day.')}</div></div>`
-      : `
-        <div class="small text-muted mb-2"><i class="bi bi-calendar-week me-1"></i>${windowText}</div>
-        ${schedule ? `<div class="phase-tiles">${tiles.join('')}</div>
-        <div class="insights-tip"><i class="bi bi-lightbulb me-2"></i>${tip}</div>` : ''}`;
+      : schedule ? `<div class="phase-tiles">${tiles.join('')}</div>` : '';
 
     // Phase bands across the day
     const bands = [];
@@ -823,6 +831,7 @@ export class InsightsView {
       }
     }
 
+    if (samples.length) this.el.chartWrap.classList.remove('d-none');
     const m = METRICS[this.metric];
     const points = samples.map(s => ({ x: s.t, y: metricValue(s, this.metric) })).filter(p => p.y !== null);
     this.chart = new Chart(this.el.chart, {
@@ -873,7 +882,7 @@ export class InsightsView {
   renderPeriodChart(periods) {
     const m = METRICS[this.metric];
     const stats = periods.map(p => p.agg.metrics.get(this.metric));
-    const hasCare = periods.some(p => p.agg.care.length);
+    this.el.chartWrap.classList.remove('d-none');
     this.chart = new Chart(this.el.chart, {
       type: 'bar',
       data: {
@@ -894,19 +903,11 @@ export class InsightsView {
           {
             label: t('Lowest – highest'),
             data: stats.map(s => (s ? [s.min, s.max] : null)),
-            backgroundColor: periods.map(p => { const l = p.agg.stats.level(); return l === null ? 'rgba(108,117,125,0.25)' : `${LEVELS[l].color}66`; }),
+            backgroundColor: stats.map(s => (s ? `${metricColor(this.metric, s.avg)}66` : 'rgba(108,117,125,0.25)')),
             borderRadius: 4,
             barPercentage: 0.6,
             yAxisID: 'y',
           },
-          ...(hasCare ? [{
-            label: t('Actions done'),
-            data: periods.map(p => p.agg.care.filter(e => e.answer === 'done').length),
-            backgroundColor: 'rgba(111, 66, 193, 0.75)',
-            borderRadius: 3,
-            barPercentage: 0.3,
-            yAxisID: 'y1',
-          }] : []),
         ],
       },
       options: {
@@ -919,28 +920,35 @@ export class InsightsView {
           legend: { position: 'bottom' },
           tooltip: {
             callbacks: {
-              label: (item) => (item.dataset.yAxisID === 'y1'
-                ? `${t('Actions done')}: ${item.raw}`
-                : Array.isArray(item.raw)
-                  ? `${t('Lowest – highest')}: ${formatMetric(item.raw[0], this.metric, false)} – ${formatMetric(item.raw[1], this.metric)}`
-                  : `${t('Average')}: ${formatMetric(item.raw, this.metric)}`),
+              label: (item) => (Array.isArray(item.raw)
+                ? `${t('Lowest – highest')}: ${formatMetric(item.raw[0], this.metric, false)} – ${formatMetric(item.raw[1], this.metric)}`
+                : `${t('Average')}: ${formatMetric(item.raw, this.metric)}`),
             },
           },
           odakBackground: { limits: m.limits || [] },
         },
         scales: {
           y: { title: { display: true, text: `${m.label}${m.unit ? ` (${m.unit})` : ''}` } },
-          ...(hasCare ? { y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { precision: 0 }, title: { display: true, text: t('Actions done') } } } : {}),
         },
       },
       plugins: [backgroundPlugin],
     });
   }
 
-  gridCell(level, value, attr) {
-    if (level === null) return `<td class="grid-cell empty" ${attr}>—</td>`;
-    return `<td class="grid-cell" ${attr} style="--level:${LEVELS[level].color}" title="${LEVELS[level].name}">
-      <span class="grid-level">${LEVELS[level].name}</span>${value ? `<span class="grid-value">${value}</span>` : ''}</td>`;
+  /** A cell shows one metric's average, in that metric's colour. */
+  gridCell(acc, attr) {
+    const stat = acc.get(this.metric);
+    if (!stat) return `<td class="grid-cell empty" ${attr}>—</td>`;
+    return `<td class="grid-cell" ${attr} style="--level:${metricColor(this.metric, stat.avg)}">${formatMetric(stat.avg, this.metric)}</td>`;
+  }
+
+  /** The legend applies only to metrics with levels; explain the colours under the view. */
+  metricNote(text) {
+    const metric = METRICS[this.metric].label;
+    const colours = METRIC_LEVEL[this.metric]
+      ? t('Colours show {metric} only; the card above rates the air as a whole.', { metric })
+      : t('{metric} has no air rating, so these cells are not coloured by level.', { metric });
+    return `${text} ${colours}`.trim();
   }
 
   // ── Week: parts of the day × days, like the device's "This week" screen ──
@@ -957,33 +965,27 @@ export class InsightsView {
       const date = addDays(first, i);
       days.push({ date, agg: index.day(date) || new PeriodAgg(), label: fmt(date, { weekday: 'short', day: 'numeric' }) });
     }
-    const value = (acc) => formatMetric(acc.get(this.metric)?.avg ?? null, this.metric);
     const header = days.map(d => `<th class="${profileFor(d.date) === 'weekend' ? 'weekend' : ''}">${fmt(d.date, { weekday: 'short' })}<br><span>${fmt(d.date, { day: 'numeric', month: 'short' })}</span></th>`).join('');
     const phaseRows = schedule ? DAY_ORDER.map(p => `
       <tr>
         <th class="row-head"><i class="bi ${PHASES[p].icon}" style="color:${PHASES[p].color}"></i> ${PHASES[p].name}</th>
-        ${days.map(d => this.gridCell(d.agg.phases[p].level(), d.agg.phases[p].empty ? '' : value(d.agg.phaseMetrics[p]), `data-date="${isoDate(d.date)}"`)).join('')}
+        ${days.map(d => this.gridCell(d.agg.phaseMetrics[p], `data-date="${isoDate(d.date)}"`)).join('')}
       </tr>`).join('') : '';
     const dayRow = `
       <tr class="day-row">
         <th class="row-head"><i class="bi bi-sun me-1"></i>${t('Whole day')}</th>
-        ${days.map(d => this.gridCell(d.agg.stats.level(), d.agg.stats.empty ? '' : value(d.agg.metrics), `data-date="${isoDate(d.date)}"`)).join('')}
-      </tr>`;
-    const doneRow = `
-      <tr>
-        <th class="row-head"><i class="bi bi-check2-circle me-1"></i>${t('Actions done')}</th>
-        ${days.map(d => { const n = d.agg.care.filter(e => e.answer === 'done').length; return `<td class="grid-count">${n || ''}</td>`; }).join('')}
+        ${days.map(d => this.gridCell(d.agg.metrics, `data-date="${isoDate(d.date)}"`)).join('')}
       </tr>`;
     this.el.content.innerHTML = `
       ${schedule ? '' : `<div class="small text-muted mb-2">${t('Set a plan in My Plan to see each part of the day.')}</div>`}
       <div class="table-responsive">
         <table class="insights-grid">
           <thead><tr><th></th>${header}</tr></thead>
-          <tbody>${phaseRows}${dayRow}${doneRow}</tbody>
+          <tbody>${phaseRows}${dayRow}</tbody>
         </table>
       </div>
-      <div class="small text-muted mt-1">${t('Values are the average {metric}. Each night is in the column of the morning it ends. Click a day to open it.', { metric: METRICS[this.metric].label })}</div>`;
-    this.renderPeriodChart(days);
+      ${METRIC_LEVEL[this.metric] ? this.legend() : ''}`;
+    this.el.note.textContent = this.metricNote(t('Values are the average {metric}. Each night is in the column of the morning it ends. Click a day to open it.', { metric: METRICS[this.metric].label }));
     this.renderCoach(agg, null, 'week', { compare: this.comparison(index, agg, index.range(addDays(first, -7), first), 'week', first, next) });
   }
 
@@ -996,17 +998,18 @@ export class InsightsView {
     for (let date = month; date < next; date = addDays(date, 1)) {
       const day = index.day(date);
       const level = day ? day.stats.level() : null;
-      const style = level === null ? '' : ` style="--level:${LEVELS[level].color}"`;
+      const stat = day ? day.metrics.get(this.metric) : null;
+      const color = mini ? (level === null ? null : LEVELS[level].color) : (stat ? metricColor(this.metric, stat.avg) : null);
+      const style = color ? ` style="--level:${color}"` : '';
       const done = day ? day.care.filter(e => e.answer === 'done').length : 0;
-      const cls = `cal-cell ${level === null ? 'empty' : 'has-data'} ${isoDate(date) === today ? 'today' : ''}`;
+      const cls = `cal-cell ${color ? 'has-data' : 'empty'} ${isoDate(date) === today ? 'today' : ''}`;
       if (mini) {
         cells.push(`<div class="${cls}" data-date="${isoDate(date)}"${style} title="${fmt(date, { weekday: 'short', day: 'numeric', month: 'short' })}${level === null ? '' : ` · ${LEVELS[level].name}`}${done ? ` · ${t('{count} done', { count: done })}` : ''}">${date.getDate()}</div>`);
       } else {
-        const st = day ? day.metrics.get(this.metric) : null;
         cells.push(`
           <div class="${cls}" data-date="${isoDate(date)}"${style}>
-            <div class="cal-day">${date.getDate()}${done ? `<span class="cal-done" title="${t('Actions done')}"><i class="bi bi-check2"></i>${done}</span>` : ''}</div>
-            ${level === null ? '' : `<div class="cal-level">${LEVELS[level].name}</div><div class="cal-value">${formatMetric(st?.avg ?? null, this.metric)}</div>`}
+            <div class="cal-day">${date.getDate()}</div>
+            ${stat ? `<div class="cal-value">${formatMetric(stat.avg, this.metric)}</div>` : ''}
           </div>`);
       }
     }
@@ -1028,14 +1031,15 @@ export class InsightsView {
     this.el.title.textContent = fmt(first, { month: 'long', year: 'numeric' });
     const agg = index.range(first, next);
     this.renderSummary(agg);
-    const days = [];
-    for (let date = first; date < next; date = addDays(date, 1)) days.push({ date, agg: index.day(date) || new PeriodAgg(), label: String(date.getDate()) });
-    const dataDays = days.filter(d => !d.agg.stats.empty);
-    const goodDays = dataDays.filter(d => d.agg.stats.level() === 0).length;
+    const dataDays = [];
+    for (let date = first; date < next; date = addDays(date, 1)) {
+      const day = index.day(date);
+      if (day && !day.stats.empty) dataDays.push(day);
+    }
     this.el.content.innerHTML = `
       ${this.monthCalendar(index, first)}
-      ${this.legend(dataDays.length ? t('{good} of {total} days with good air', { good: goodDays, total: dataDays.length }) : t('No measurements this month'))}`;
-    this.renderPeriodChart(days);
+      ${dataDays.length ? (METRIC_LEVEL[this.metric] ? this.legend() : '') : this.legend(t('No measurements this month'))}`;
+    this.el.note.textContent = dataDays.length ? this.metricNote('') : '';
     this.renderCoach(agg, null, 'month', { compare: this.comparison(index, agg, index.range(addMonths(first, -1), first), 'month', first, next) });
   }
 
@@ -1071,10 +1075,6 @@ export class InsightsView {
       <tr class="day-row"><th class="row-head"><i class="bi bi-sun me-1"></i>${t('Whole day')}</th>
         ${weeks.map((w, i) => { const l = w.agg.stats.level(); return `<td class="week-cell${sep(i)} ${l === null ? 'empty' : ''}" data-week="${isoDate(w.date)}" ${l === null ? '' : `style="--level:${LEVELS[l].color}"`} title="${t('Week of {date}', { date: w.label })}${l === null ? '' : ` · ${LEVELS[l].name}`}"></td>`; }).join('')}
       </tr>`;
-    const doneRow = `
-      <tr><th class="row-head"><i class="bi bi-check2-circle me-1"></i>${t('Done')}</th>
-        ${weeks.map((w, i) => { const n = w.agg.care.filter(e => e.answer === 'done').length; return `<td class="week-count${sep(i)}">${n || ''}</td>`; }).join('')}
-      </tr>`;
     const months = [];
     for (let i = 0; i < 6; i++) {
       const month = addMonths(first, i);
@@ -1083,15 +1083,16 @@ export class InsightsView {
     const dataDays = [...index.days.values()].filter(d => d.date >= first && d.date < next && !d.stats.empty);
     const goodDays = dataDays.filter(d => d.stats.level() === 0).length;
     this.el.content.innerHTML = `
-      <h6 class="fw-semibold mb-2">${t('By week')}</h6>
       <div class="table-responsive">
         <table class="weeks-grid">
           <thead><tr><th></th>${monthHeads.map((m, i) => `<th colspan="${m.span}" class="${i > 0 ? 'month-start' : ''}">${m.name}</th>`).join('')}</tr></thead>
-          <tbody>${rows}${dayRow}${doneRow}</tbody>
+          <tbody>${rows}${dayRow}</tbody>
         </table>
       </div>
-      <h6 class="fw-semibold mt-3 mb-2">${t('By day')}</h6>
-      <div class="mini-months">${months.join('')}</div>
+      <details class="ins-more">
+        <summary>${t('By day')}</summary>
+        <div class="mini-months">${months.join('')}</div>
+      </details>
       ${this.legend(dataDays.length ? t('{good} of {total} days with good air · click a week or day to open it', { good: goodDays, total: dataDays.length }) : t('No measurements in these months'))}`;
     this.renderPeriodChart(weeks);
     this.renderCoach(agg, null, '6 months', { compare: this.comparison(index, agg, index.range(addMonths(first, -6), first), '6 months', first, next) });

@@ -22,8 +22,14 @@ contextBridge.exposeInMainWorld('api', {
   
   // Device history (measurements stored in the device's flash)
   saveHistory: (history) => ipcRenderer.invoke('save-history', history),
-  loadHistoryCache: () => ipcRenderer.invoke('history-cache-load'),
-  saveHistoryCache: (cache) => ipcRenderer.invoke('history-cache-save', cache),
+  loadHistory: (device) => ipcRenderer.invoke('history-load', device),
+  historySyncStart: (request) => ipcRenderer.invoke('history-sync-start', request),
+  addHistory: (sync) => ipcRenderer.invoke('history-add', sync),
+  exportHistory: (device) => ipcRenderer.invoke('history-export', device),
+  
+  // Devices, told apart by their USB serial number
+  deviceSeen: (id) => ipcRenderer.invoke('device-seen', id),
+  renameDevice: (id, name) => ipcRenderer.invoke('device-rename', id, name),
   openHistoryFile: () => ipcRenderer.invoke('open-history-file'),
   saveBackup: (backup) => ipcRenderer.invoke('save-backup', backup),
   
