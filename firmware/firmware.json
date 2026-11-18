@@ -2,21 +2,21 @@
   "boards": {
     "v2": {
       "name": "New board",
-      "version": "2.9.8",
-      "date": "2026-11-05",
-      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v2-2.9.8/odak-v2-2.9.8.uf2",
-      "sha256": "f731c639c20f88f376c6befab6957133a97563c734e058afcebf296f29ebfa52",
-      "notes": "New Noto Sans font on every screen, with proper Turkish characters\nAQI now uses PM2.5 only, on the 2024 US EPA scale\nHome page shows the worst reading and names it; bigger numbers on the all-in-one page\nLast 24 hours page shows CO2, VOC and PM together on a timeline\nSimpler setup with a button guide; the date is set digit by digit\nHealth scores page lists its scientific references\nScreen and sensor waits can no longer hang the device; battery cut-off is 3.30 V",
-      "notes_tr": "Tüm ekranlarda yeni Noto Sans yazı tipi ve doğru Türkçe karakterler\nAQI artık yalnızca PM2.5 kullanır (2024 ABD EPA ölçeği)\nAna sayfa en kötü ölçümü adıyla gösterir; tümü bir arada sayfasında rakamlar daha büyük\nSon 24 Saat sayfası CO2, VOC ve PM değerlerini aynı zaman çizelgesinde gösterir\nDüğme rehberiyle daha kolay kurulum; tarih basamak basamak ayarlanır\nSağlık puanları sayfasında bilimsel kaynaklar listelenir\nEkran ve sensör beklemeleri artık cihazı kilitleyemez; pil kesme eşiği 3,30 V"
+      "version": "2.9.9",
+      "date": "2026-11-18",
+      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v2-2.9.9/odak-v2-2.9.9.uf2",
+      "sha256": "c32ed8b1654495bf4db677e19f4133ce7c3233464ccd147693a7d0645cb423d8",
+      "notes": "Keeps a log of sleep and wake events, to find the cause of rare freezes\nLonger crystal start-up after sleep, against a rare freeze\nFix: plugging in USB while the device was measuring left it invisible to the computer until the cable was plugged in again",
+      "notes_tr": "Uyku ve uyanma olaylarının kaydını tutar; nadir donmaların nedenini bulmak için\nUykudan sonra kristale daha uzun başlama süresi; nadir bir donmaya karşı\nDüzeltme: cihaz ölçüm yaparken USB takıldığında, kablo yeniden takılana kadar bilgisayar cihazı görmüyordu"
     },
     "v1": {
       "name": "Original board",
-      "version": "1.7.4",
-      "date": "2026-11-05",
-      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v1-1.7.4/odak-v1-1.7.4.uf2",
-      "sha256": "f218e69ef7e9c2f229bf3bd8e81b867b3bfc4309c1652c33f03a19e220d59574",
-      "notes": "New Noto Sans font on every screen, with proper Turkish characters\nAQI now uses PM2.5 only, on the 2024 US EPA scale\nHome page shows the worst reading and names it; bigger numbers on the all-in-one page\nLast 24 hours page shows CO2, VOC and PM together on a timeline\nSimpler setup with a button guide; the date is set digit by digit\nHealth scores page lists its scientific references\nScreen and sensor waits can no longer hang the device; battery cut-off is 3.30 V",
-      "notes_tr": "Tüm ekranlarda yeni Noto Sans yazı tipi ve doğru Türkçe karakterler\nAQI artık yalnızca PM2.5 kullanır (2024 ABD EPA ölçeği)\nAna sayfa en kötü ölçümü adıyla gösterir; tümü bir arada sayfasında rakamlar daha büyük\nSon 24 Saat sayfası CO2, VOC ve PM değerlerini aynı zaman çizelgesinde gösterir\nDüğme rehberiyle daha kolay kurulum; tarih basamak basamak ayarlanır\nSağlık puanları sayfasında bilimsel kaynaklar listelenir\nEkran ve sensör beklemeleri artık cihazı kilitleyemez; pil kesme eşiği 3,30 V"
+      "version": "1.7.5",
+      "date": "2026-11-18",
+      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v1-1.7.5/odak-v1-1.7.5.uf2",
+      "sha256": "2308a3b8d1811adb2b57c772bc25806237cac79bf27883056ef626dc7b394f40",
+      "notes": "Keeps a log of sleep and wake events, to find the cause of rare freezes\nLonger crystal start-up after sleep, against a rare freeze\nFix: plugging in USB while the device was measuring left it invisible to the computer until the cable was plugged in again",
+      "notes_tr": "Uyku ve uyanma olaylarının kaydını tutar; nadir donmaların nedenini bulmak için\nUykudan sonra kristale daha uzun başlama süresi; nadir bir donmaya karşı\nDüzeltme: cihaz ölçüm yaparken USB takıldığında, kablo yeniden takılana kadar bilgisayar cihazı görmüyordu"
     }
   }
 }
