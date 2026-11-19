@@ -2,21 +2,21 @@
   "boards": {
     "v2": {
       "name": "New board",
-      "version": "2.9.9",
-      "date": "2026-11-18",
-      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v2-2.9.9/odak-v2-2.9.9.uf2",
-      "sha256": "c32ed8b1654495bf4db677e19f4133ce7c3233464ccd147693a7d0645cb423d8",
-      "notes": "Keeps a log of sleep and wake events, to find the cause of rare freezes\nLonger crystal start-up after sleep, against a rare freeze\nFix: plugging in USB while the device was measuring left it invisible to the computer until the cable was plugged in again",
-      "notes_tr": "Uyku ve uyanma olaylarının kaydını tutar; nadir donmaların nedenini bulmak için\nUykudan sonra kristale daha uzun başlama süresi; nadir bir donmaya karşı\nDüzeltme: cihaz ölçüm yaparken USB takıldığında, kablo yeniden takılana kadar bilgisayar cihazı görmüyordu"
+      "version": "2.9.10",
+      "date": "2026-11-19",
+      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v2-2.9.10/odak-v2-2.9.10.uf2",
+      "sha256": "89c8c813bd78d1e6a6f97f013734fde486384a2ae04b3b58c4a30891f5af7061",
+      "notes": "The home page headline and the big number now always name the same pollutant (the worst one)\nDust/smoke advice is now \"Turn on purifier\"",
+      "notes_tr": "Ana sayfadaki başlık ve büyük sayı artık her zaman aynı kirleticiyi (en kötüsünü) gösterir\nToz/duman önerisi artık \"Temizleyici aç\""
     },
     "v1": {
       "name": "Original board",
-      "version": "1.7.5",
-      "date": "2026-11-18",
-      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v1-1.7.5/odak-v1-1.7.5.uf2",
-      "sha256": "2308a3b8d1811adb2b57c772bc25806237cac79bf27883056ef626dc7b394f40",
-      "notes": "Keeps a log of sleep and wake events, to find the cause of rare freezes\nLonger crystal start-up after sleep, against a rare freeze\nFix: plugging in USB while the device was measuring left it invisible to the computer until the cable was plugged in again",
-      "notes_tr": "Uyku ve uyanma olaylarının kaydını tutar; nadir donmaların nedenini bulmak için\nUykudan sonra kristale daha uzun başlama süresi; nadir bir donmaya karşı\nDüzeltme: cihaz ölçüm yaparken USB takıldığında, kablo yeniden takılana kadar bilgisayar cihazı görmüyordu"
+      "version": "1.7.6",
+      "date": "2026-11-19",
+      "url": "https://github.com/mountainlabs-dev/odak-gui/releases/download/firmware-v1-1.7.6/odak-v1-1.7.6.uf2",
+      "sha256": "e87e1791ba01f1959f8625901ccd59e44e3ad1bb05686a1eaf97002aa3f3cf9d",
+      "notes": "The home page headline and the big number now always name the same pollutant (the worst one)",
+      "notes_tr": "Ana sayfadaki başlık ve büyük sayı artık her zaman aynı kirleticiyi (en kötüsünü) gösterir"
     }
   }
 }
